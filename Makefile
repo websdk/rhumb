@@ -33,7 +33,7 @@ dev: node_modules
 release: clean build test
 	@npm version $(v)
 	@npm publish
-	@git push --tags
+	@git push --follow-tags
 
 clean:
 	@rm -rf $$(cat .gitignore)

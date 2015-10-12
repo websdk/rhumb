@@ -1,5 +1,5 @@
 var test  = require('tape')
-  , rhumb = require('../../lib/rhumb')
+  , rhumb = require('../../src/rhumb')
 
 test("Routing should match /woo/wee over /woo/{wee}", function(t) {
   t.plan(1)

@@ -1,5 +1,5 @@
 var test  = require('tape')
-  , rhumb = require('../../lib/rhumb')
+  , rhumb = require('../../src/rhumb')
 
 test("Parsing should find one fixed part", function(t) {
   var out = rhumb._parse("/foo")

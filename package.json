@@ -5,6 +5,7 @@
   "main": "lib/rhumb.js",
   "devDependencies": {
     "browserify": "11.1.0",
+    "coveralls": "2.11.4",
     "nodemon": "1.7.1",
     "nyc": "3.2.2",
     "tap-dot": "1.0.0",

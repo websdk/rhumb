@@ -4,13 +4,12 @@
   "description": "URL routing in js",
   "main": "lib/rhumb.js",
   "devDependencies": {
-    "browserify": "^11.1.0",
-    "faucet": "0.0.1",
-    "tape": "^4.2.0"
-  },
-  "scripts": {
-    "test": "make test",
-    "preversion": "make all"
+    "browserify": "11.1.0",
+    "nodemon": "1.7.1",
+    "nyc": "3.2.2",
+    "tap-dot": "1.0.0",
+    "tape": "4.2.0",
+    "uglifyjs": "2.4.10"
   },
   "repository": {
     "type": "git",

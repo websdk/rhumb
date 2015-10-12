@@ -1,23 +1,41 @@
 PATH  := node_modules/.bin:$(PATH)
 SHELL := /bin/bash
 
-build: node_modules src/rhumb.js
-	echo "--> Building project ..."
-	mkdir -p lib
-	browserify src/rhumb.js --standalone rhumb -o lib/rhumb.js
+SRC = $(wildcard src/*.js)
+LIB = $(SRC:src/%.js=lib/%.js)
+TST = $(wildcard test/*.js) $(wildcard test/**/*.js)
+NPM = @npm install --local > /dev/null && touch node_modules
 
-test: build
-	echo "--> Running tests ..."
-	tape test/**/*.js | faucet
+v  ?= patch
+
+build: node_modules $(LIB)
+lib/%.js: src/%.js
+	@mkdir -p $(@D)
+	@browserify $< --standalone $(@F:%.js=%) | uglifyjs -o $@
 
 node_modules: package.json
-	echo "--> Installing dependencies ..."
-	npm -q install
+	$(NPM)
+node_modules/%:
+	$(NPM)
+
+test: build
+	@tape $(TST)
+
+.nyc_output: node_modules
+	@nyc $(MAKE) test
+
+coverage: .nyc_output
+	@nyc report --reporter=text-lcov | coveralls
+
+dev: node_modules
+	@nodemon -q -x "(clear; nyc $(MAKE) test | tap-dot && nyc report) || true"
+
+release: clean build test
+	@npm version $(v)
+	@npm publish
+	@git push --tags
 
 clean:
-	rm -rf lib node_modules
+	@rm -rf $$(cat .gitignore)
 
-all: clean build test
-
-.PHONY: clean all
-.SILENT: build test node_modules clean
+.PHONY: build test coverage dev release clean

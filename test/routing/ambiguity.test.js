@@ -1,5 +1,5 @@
 var test  = require('tape')
-  , rhumb = require('../../lib/rhumb')
+  , rhumb = require('../../src/rhumb')
 
 test("Routing should detect /foo/{bar} and /foo(/{maybe}) as ambiguous", function(t) {
   t.plan(1)

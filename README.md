@@ -120,8 +120,6 @@ Will match
 
 Have fun!
 
+---
 
-License
--------
-
-License: http://sammyt.mit-license.org
+[LICENSE](LICENSE)

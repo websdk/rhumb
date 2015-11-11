@@ -4,7 +4,8 @@
   "description": "URL routing in js",
   "main": "lib/rhumb.js",
   "devDependencies": {
-    "browserify": "11.1.0",
+    "babel-cli": "6.1.4",
+    "babel-plugin-transform-es2015-modules-umd": "6.1.4",
     "coveralls": "2.11.4",
     "nodemon": "1.7.1",
     "nyc": "3.2.2",

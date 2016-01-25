@@ -29,9 +29,9 @@ function findIn(parts, tree){
       }
     }
 
-    if(node.var){
-      params[node.var.name] = part
-      return find(remaining, node.var)
+    if(node['var']){
+      params[node['var'].name] = part
+      return find(remaining, node['var'])
     }
     return false
   }
@@ -75,14 +75,14 @@ function create (){
       peek = node.fixed[part.input] || (node.fixed[part.input] = {})
     }
     else if(part.type == "var"){
-      if(node.var) {
-        if(node.var.name == part.input) {
-          peek = node.var
+      if(node['var']) {
+        if(node['var'].name == part.input) {
+          peek = node['var']
         } else {
           throw new Error("Ambiguity")
         }
       } else {
-        peek = node.var = { name : part.input }
+        peek = node['var'] = { name : part.input }
       }
     }
     else if(part.type = "partial"){

@@ -37,6 +37,6 @@ release: clean build test
 	@git push --follow-tags
 
 clean:
-	@rm -rf $$(cat .gitignore)
+	@rm -rf lib
 
 .PHONY: build test coverage dev release clean

@@ -25,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/sammyt/rhumb/issues"
   },
-  "homepage": "https://github.com/sammyt/rhumb#readme"
+  "homepage": "https://github.com/sammyt/rhumb#readme",
+  "scripts": {
+    "prepublish": "make clean build"
+  }
 }

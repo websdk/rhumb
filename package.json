@@ -1,6 +1,6 @@
 {
   "name": "@websdk/rhumb",
-  "version": "0.3.9-support-root-paths.0",
+  "version": "0.3.9-support-root-paths.1",
   "description": "URL routing in js",
   "main": "lib/rhumb.js",
   "devDependencies": {

@@ -47,10 +47,6 @@ function findIn(parts, tree){
   return false
 }
 
-function isArr(inst){
-  return inst instanceof Array
-}
-
 function create (){
   var router = {}
     , tree   = {}  
@@ -60,23 +56,28 @@ function create (){
       , more = !!parts.length
       , peek
 
-    
-    if(isArr(part)){
+    if (Array.isArray(part)) {
+      if (node.leaf) {
+        throw new Error('Ambiguous')
+      }
+
       node.leaf = fn
       updateTree(part, node, fn)
       return
     }
 
-    if(!part){ return }
+    if (!part) return 
 
-    if(part.type == "fixed"){
-      node["fixed"] || (node["fixed"] = {});
-          
+    if (part.type === "fixed") {
+      node.fixed || (node.fixed = {})
       peek = node.fixed[part.input] || (node.fixed[part.input] = {})
-    }
-    else if(part.type == "var"){
-      if(node['var']) {
-        if(node['var'].name == part.input) {
+
+      if (peek.leaf && !more) {
+        throw new Error("Ambiguity")
+      }
+    } else if(part.type === "var") {
+      if (node['var']) {
+        if (node['var'].name === part.input) {
           peek = node['var']
         } else {
           throw new Error("Ambiguity")
@@ -84,10 +85,9 @@ function create (){
       } else {
         peek = node['var'] = { name : part.input }
       }
-    }
-    else if(part.type = "partial"){
-      if(node.partial){
-        if(node.partial.names[part.name]) {
+    } else if (part.type = "partial") {
+      if (node.partial) {
+        if (node.partial.names[part.name]) {
           throw new Error("Ambiguity")
         }
       }
@@ -100,7 +100,8 @@ function create (){
       node.partial.names[part.name] = peek
       node.partial.tests.push(peek)  
     }
-    if(!more){
+
+    if (!more) {
       peek.leaf = fn
     } else {
       updateTree(parts, peek, fn)
@@ -114,7 +115,7 @@ function create (){
   router.match = function(path){
     
     var split = path.split("?").filter(falsy)
-      , parts = split[0].split("/").filter(falsy)
+      , parts = ['/'].concat(split[0].split("/").filter(falsy))
       , params = parseQueryString(split[1])
       , match = findIn(parts, tree)
 
@@ -147,9 +148,7 @@ function parse(ptn){
     , partial   = /([\w'-]+)?{([\w-]+)}([\w'-]+)?/
     , bracks    = /^[)]+/
 
-  if(ptn.trim() == "/"){
-    return [{type:"fixed", input: ""}]
-  }
+  return ~ptn.indexOf('(')? parseOptional(ptn) : parsePtn(ptn)
 
   function parseVar(part){
     var match = part.match(variable)
@@ -206,7 +205,7 @@ function parse(ptn){
   }
 
   function parsePtn(ptn){
-    return ptn.split("/")
+    return ['/'].concat(ptn.split("/"))
       .filter(falsy)
       .map(function(d){
         if(variable.test(d)){
@@ -219,18 +218,16 @@ function parse(ptn){
       })
   }
 
-  function parseOptional(ptn){
-    
+  function parseOptional(ptn) {
     var out =  ""
       , list = []
 
     var i = 0
       , len = ptn.length
-      , curr
       , onePart = true
 
-    while(onePart && i < len){
-      curr = ptn[i]
+    while (onePart && i < len) {
+      var curr = ptn.charAt(i)
       switch(curr){
         case ")":
         case "(":
@@ -245,7 +242,7 @@ function parse(ptn){
     }
 
     if(!onePart){
-      var next = parseOptional(ptn.substr(i + 1))
+      var next = parseOptional(ptn.substr(i + 1)).slice(1)
       if(next.length){
         list.push(
           next
@@ -255,12 +252,6 @@ function parse(ptn){
 
     return parsePtn(out).concat(list)
   }
-
-  if(ptn.indexOf("(") == -1){
-    return parsePtn(ptn)
-  }
-  
-  return parseOptional(ptn)
 }
 
 var rhumb = create()

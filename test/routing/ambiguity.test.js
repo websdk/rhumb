@@ -1,6 +1,28 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
 
+test('Routing should detect /foo and (/foo) as ambiguous', function(t) {
+  t.plan(1)
+  var router = rhumb.create()
+
+  router.add('/foo', function() {})
+
+  t.throws(function() {
+    router.add('(/foo)', function() {})
+  })
+})
+
+test('Routing should detect /foo and /foo as ambiguous', function(t) {
+  t.plan(1)
+  var router = rhumb.create()
+
+  router.add('/foo', function() {})
+
+  t.throws(function() {
+    router.add('/foo', function() {})
+  })
+})
+
 test("Routing should detect /foo/{bar} and /foo(/{maybe}) as ambiguous", function(t) {
   t.plan(1)
   var router = rhumb.create()

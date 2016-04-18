@@ -57,10 +57,6 @@ function create (){
       , peek
 
     if (Array.isArray(part)) {
-      if (node.leaf) {
-        throw new Error('Ambiguous')
-      }
-
       node.leaf = fn
       updateTree(part, node, fn)
       return

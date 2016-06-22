@@ -1,7 +1,11 @@
 Rhumb
 =====
 
-routing, this and that.
+Rhumb is a highly efficient and flexible router.
+
+Given a URI – where the constituent parts may be fixed or variable – Rhumb will unambiguously and with negligable overhead find a matching function, then apply it with whatever parameters might have been extracted from the URI.
+
+[Read more](RATIONALE.md).
 
 
 Bells and Whistles

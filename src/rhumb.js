@@ -111,7 +111,8 @@ function create (){
   router.match = function(path){
     
     var split = path.split("?").filter(falsy)
-      , parts = ['/'].concat(split[0].split("/").filter(falsy))
+      , pathWithoutQueryString = split[0] || ''
+      , parts = ['/'].concat(pathWithoutQueryString.split("/").filter(falsy))
       , params = parseQueryString(split[1])
       , match = findIn(parts, tree)
 
@@ -250,8 +251,78 @@ function parse(ptn){
   }
 }
 
+function isEmptyValue(val) {
+  return val === null || val === undefined || val === ''
+}
+
+function interpolateVar(uri, part, params){
+  var value = params[part.input]
+  if(isEmptyValue(value)) {
+    return uri
+  }
+  return [uri, encodeURIComponent(value)].join("/")
+}
+
+function interpolateFixed(uri, part){
+  if(part.input === "/") {
+    return uri
+  }
+  return [uri, part.input].join("/")
+}
+
+function interpolatePartial(uri, part, params){
+  var i = 0
+    , allPartialsPresent = true
+    , match = part.name.replace(/\{var\}/g, function() {
+        var varName = part.vars[i++]
+          , value = params[varName]
+        allPartialsPresent = allPartialsPresent && !isEmptyValue(value)
+        return encodeURIComponent(value)
+      })
+
+  return allPartialsPresent ? [uri, match].join("/") : uri
+}
+
+function interpolateOptional(uri, optionalPart, params){
+  return uri + optionalPart.reduce(
+    function(path, part) {
+      switch (part.type) {
+        case "var":
+          return interpolateVar(path, part, params)
+        case "partial":
+          return interpolatePartial(path, part, params)
+        case "fixed":
+          return interpolateFixed(path, part)
+        default:
+          return path ? interpolateOptional(path, part, params) : ''
+      }
+    }, '')
+}
+
+function interpolate(ptn, params) {
+  var parts = ptn.split("?")
+
+  parts[0] = parse(parts[0]).reduce(
+    function(uri, part) {
+      switch (part.type) {
+        case "var":
+          return interpolateVar(uri, part, params)
+        case "partial":
+          return interpolatePartial(uri, part, params)
+        case "fixed":
+          return interpolateFixed(uri, part)
+        default:
+          return interpolateOptional(uri, part, params)
+      }
+    }
+  , ""
+  ) || "/"
+  return parts.filter(falsy).join("?")
+}
+
 var rhumb = create()
 rhumb.create = create
+rhumb.interpolate = interpolate
 rhumb._parse = parse
 rhumb._findInTree = findIn
 

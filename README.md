@@ -16,6 +16,7 @@ Bells and Whistles
 * partially variable parts
 * optional parts
 * parameter parsing
+* interpolate params to produce URIs
 
 
 Basic Usage
@@ -41,6 +42,12 @@ Whatever you return in the callback will to handed back to the caller of `match`
 
 ```javascript
 redShoes = rhumb.match("/happy/shoes/red")
+```
+
+When you need to create a URI from a set of params, the `interpolate` function can be used
+
+```javascript
+redShoesUri = rhumb.interpolate("/happy/shoes/{color}", { color: "red" })
 ```
 
 Route Syntax

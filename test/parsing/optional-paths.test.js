@@ -7,7 +7,7 @@ test("Parsing should find optional part at end of path", function(t){
   var out = rhumb._parse("/one/two(/three)")
 
   t.plan(2)
-  t.ok(out)
+  t.ok(out, "returns parsed data")
   t.deepEqual(out,
     [ root
     , { type: "fixed", input: "one"}
@@ -21,7 +21,7 @@ test("Parsing should find nested optional elements at end of path", function(t){
   var out = rhumb._parse("/one/two(/three/four(/five))")
 
   t.plan(2)
-  t.ok(out)
+  t.ok(out, "returns parsed data")
   t.deepEqual(out,
     [ root
     , { type: "fixed", input: "one"}

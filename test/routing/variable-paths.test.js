@@ -53,3 +53,14 @@ test("Routing should match /foo/{bar} and /foo/{bar}/{baz} as different paths", 
   router.match("/foo/one")
   router.match("/foo/two/three")
 })
+
+test("Routing should decode variable parts", function(t) {
+  t.plan(1)
+  var router = rhumb.create()
+
+  router.add("/{package}", function(params) {
+    t.deepEqual(params, { package: "@abc/de" }, "correctly decodes params")
+  })
+
+  router.match("/%40abc%2Fde")
+})

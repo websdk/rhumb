@@ -17,7 +17,7 @@ function findIn(parts, tree){
             if(partial.ptn.test(part)){
               var match = part.match(partial.ptn)
               partial.vars.forEach(function(d, i){
-                params[d] = match[i+1]
+                params[d] = decodeURIComponent(match[i+1])
               })
               node = partial
               return true
@@ -29,9 +29,9 @@ function findIn(parts, tree){
       }
     }
 
-    if(node['var']){
-      params[node['var'].name] = part
-      return find(remaining, node['var'])
+    if(node["var"]){
+      params[node["var"].name] = decodeURIComponent(part)
+      return find(remaining, node["var"])
     }
     return false
   }
@@ -175,7 +175,7 @@ function parse(ptn){
         ptn += match[1]
       }
 
-      ptn += "([\\w-]+)"
+      ptn += "([\\w-%]+)"
 
       if(match[3]){
         ptn += match[3]

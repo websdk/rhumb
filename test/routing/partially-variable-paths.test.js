@@ -55,5 +55,16 @@ test("Routing should match /{day}-{month}-{year} with path /mon-01-2020", functi
     t.deepEqual(params, { day: "mon", month: "01", year: "2020" })
   })
 
-  router.match("mon-01-2020")
+  router.match("/mon-01-2020")
+})
+
+test('Partially variable parts handles encoding a non-empty param', function (t) {
+  t.plan(1)
+  var router = rhumb.create()
+
+  router.add("/{day}-{month}-{year}", function(params) {
+    t.deepEqual(params, { day: "??", month: "jan & may", year: "2020" }, "correctly decodes params")
+  })
+
+  router.match("/%3F%3F-jan%20%26%20may-2020")
 })

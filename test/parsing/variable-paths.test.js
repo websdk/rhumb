@@ -1,5 +1,6 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
+  , utils = require('../utils')
 
 var root = { type: 'fixed', input: '/' }
 

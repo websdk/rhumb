@@ -1,5 +1,6 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
+  , utils = require('../utils')
 
 test("Routing should match /page-{num} with path /page-four", function(t) {
   t.plan(1)
@@ -59,12 +60,15 @@ test("Routing should match /{day}-{month}-{year} with path /mon-01-2020", functi
 })
 
 test('Partially variable parts handles encoding a non-empty param', function (t) {
-  t.plan(1)
-  var router = rhumb.create()
+  t.plan(2)
 
-  router.add("/{day}-{month}-{year}", function(params) {
-    t.deepEqual(params, { day: "??", month: "jan & may", year: "2020" }, "correctly decodes params")
+  utils.performMatch('/wibble/foo-{bar}', '/wibble/foo-Hello%20bar', function (params) {
+    t.deepEqual(params, { bar: 'Hello bar' }
+      , 'path should match with params decoded and included in params list')
   })
 
-  router.match("/%3F%3F-jan%20%26%20may-2020")
+  utils.performMatch('/wibble/foo-{bar}', '/wibble/foo-Hello%2520bar', function (params) {
+    t.deepEqual(params, { bar: 'Hello%20bar' }
+      , 'path should match with params decoded once and included in params list')
+  })
 })

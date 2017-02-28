@@ -2,53 +2,65 @@ var test  = require('tape')
   , rhumb = require('../../src/rhumb')
   , utils = require('../utils')
 
-var root = { type: 'fixed', input: '/' }
-
 test("Parsing should find optional part at end of path", function(t){
-  var out = rhumb._parse("/one/two(/three)")
+  t.plan(3)
 
-  t.plan(2)
-  t.ok(out, "returns parsed data")
-  t.deepEqual(out,
-    [ root
-    , { type: "fixed", input: "one"}
-    , { type: "fixed", input: "two"}
-    , [ { type: "fixed", input: "three"} ]
-    ]
-  )
+  var parts = [
+        [
+          utils.rootPart()
+        , utils.fixedPart('wibble')
+        , [utils.fixedPart('foo')]
+        ]
+      , [
+          utils.rootPart()
+        , utils.fixedPart('wibble')
+        , [
+            utils.fixedPart('foo')
+          , utils.fixedPart('bar')
+          ]
+        ]
+      ]
+
+  t.deepEqual(rhumb._parse('(/foo)'), [utils.rootPart(), [utils.fixedPart('foo')]]
+    , 'returns a root part and an optional fixed part when being parsed')
+
+  t.deepEqual(rhumb._parse('/wibble(/foo)'), parts[0]
+    , 'returns a root part, a fixed part and an optional fixed part when being parsed')
+
+  t.deepEqual(rhumb._parse('/wibble(/foo/bar)'), parts[1]
+    , 'returns a root part, a fixed part and an optional fixed part when being parsed')
 })
 
 test("Parsing should find nested optional elements at end of path", function(t){
-  var out = rhumb._parse("/one/two(/three/four(/five))")
+  t.plan(1)
 
-  t.plan(2)
-  t.ok(out, "returns parsed data")
-  t.deepEqual(out,
-    [ root
-    , { type: "fixed", input: "one"}
-    , { type: "fixed", input: "two"}
-    , [ { type: "fixed", input: "three"}
-      , { type: "fixed", input: "four"}
-      , [ { type: "fixed", input: "five"} ]
+  var parts = [
+        utils.rootPart()
+      , utils.fixedPart('wibble')
+      , [
+          utils.fixedPart('foo')
+        , [utils.fixedPart('bar')]
+        ]
       ]
-    ]
-  )
+
+  t.deepEqual(rhumb._parse('/wibble(/foo(/bar))'), parts
+    , 'returns a root part, fixed part and a nested optional fixed part when being parsed')
 })
 
 /*
 TODO: later :)
 test("should find optional elements anywhere in path", function(t){
-  var out = rhumb._parse("/one/two(/three)/gogogo")
+  t.plan(1)
 
-  t.plan(2)
-  t.ok(out)
-  t.deepEqual(out,
-    [ { type: "fixed", input: "one"}
-    , { type: "fixed", input: "two"}
-    , [ { type: "fixed", input: "three"} ]
-    , { type: "fixed", input: "gogogo"}
-    ]
-  )
+  var parts = [
+        utils.rootPart()
+      , utils.fixedPart('wibble')
+      , utils.fixedPart('foo')
+      , [utils.fixedPart('bar')]
+      , utils.fixedPart('bing')
+      ]
+
+  t.deepEqual(rhumb._parse('/wibble/foo(/bar)/bing'), parts)
 })
 */
 

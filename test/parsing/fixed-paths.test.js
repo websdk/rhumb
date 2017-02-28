@@ -2,35 +2,45 @@ var test  = require('tape')
   , rhumb = require('../../src/rhumb')
   , utils = require('../utils')
 
-var root = { type: 'fixed', input: '/' }
-
 test('Parsing should always infer root', function(t) {
   t.plan(2)
 
-  t.deepEqual(rhumb._parse(''), [ root ])
-  t.deepEqual(rhumb._parse('/'), [ root ])
+  t.deepEqual(rhumb._parse(''), [utils.rootPart()]
+    , 'returns a root part when being parsed')
+  t.deepEqual(rhumb._parse('/'), [utils.rootPart()]
+    , 'returns a root part when being parsed')
 })
 
 test("Parsing should find one fixed part", function(t) {
-  var out = rhumb._parse("/foo")
+  t.plan(2)
 
-  t.plan(1)
-  t.deepEqual(out,
-    [ root, { type: "fixed", input: "foo" } ]
-  )
+  var parts = [
+        utils.rootPart()
+      , utils.fixedPart('foo')
+     ]
+
+  t.deepEqual(rhumb._parse('/foo'), parts
+    , 'returns a root part and fixed part when being parsed')
+
+  t.deepEqual(rhumb._parse('/foo/'), parts
+    , 'returns a root part and fixed part when being parsed')
 })
 
 test("Parsing should find multiple fixed parts", function(t) {
-  var out = rhumb._parse("/foo/bar/bing")
+  t.plan(2)
 
-  t.plan(1)
-  t.deepEqual(out,
-    [ root
-    , { type: "fixed", input: "foo"  }
-    , { type: "fixed", input: "bar"  }
-    , { type: "fixed", input: "bing" }
-    ]
-  )
+  var parts = [
+        utils.rootPart()
+      , utils.fixedPart('foo')
+      , utils.fixedPart('bar')
+      , utils.fixedPart('bing')
+     ]
+
+  t.deepEqual(rhumb._parse('/foo/bar/bing'), parts
+    , 'returns a root part and three fixed parts when being parsed')
+
+  t.deepEqual(rhumb._parse('/foo/bar/bing/'), parts
+    , 'returns a root part and three fixed parts when being parsed')
 })
 
 test('Parsing should handle a path with no leading slash', function(t) {

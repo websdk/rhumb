@@ -45,12 +45,3 @@ test("Routing should match /foo/{bar} and /foo/{bar}/{baz} as different paths", 
   router.match("/foo/one")
   router.match("/foo/two/three")
 })
-
-test("Routing should decode variable parts", function(t) {
-  t.plan(1)
-
-  utils.performMatch('/{package}', '/%40scope%2Fpackage', function (params) {
-    t.deepEqual(params, { package: '@scope/package' }
-      , 'path should match with decoded params included in params list')
-  })
-})

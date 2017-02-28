@@ -107,3 +107,22 @@ test('Routing should handle multiple query params', function (t) {
       , 'path should match with query params included in params list')
   })
 })
+
+test('Paths with query string should handle encoded query params', function (t) {
+  t.plan(3)
+
+  utils.performMatch('/wibble', '/wibble?bing%2Furl=http%3A%2F%2Fwww.bing.com%2F', function (params) {
+    t.deepEqual(params, { 'bing/url': 'http://www.bing.com/' }
+      , 'path should match with query params decoded and included in params list')
+  })
+
+  utils.performMatch('/wibble', '/wibble?foo=Hello%2520bar', function (params) {
+    t.deepEqual(params, { foo: 'Hello%20bar' }
+      , 'path should match with query params decoded once and included in params list')
+  })
+
+  utils.performMatch('/wibble', '/wibble?foo=Hello%C3bar', function (params) {
+    t.deepEqual(params, { foo: 'Hello%C3bar' }
+      , 'path should match with query params included in params list even when value can not be decoded')
+  })
+})

@@ -23,17 +23,6 @@ test('Interpolating should handle multiple non-empty params', function (t) {
     , 'returns path where variable substituted when being interpolated')
 })
 
-test('Interpolating should handle encoding a non-empty param', function (t) {
-  t.plan(2)
-
-  t.equal(rhumb.interpolate('/wibble/{foo}', { foo: 'http://www.bing.com/' }), '/wibble/http%3A%2F%2Fwww.bing.com%2F'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-
-
-  t.equal(rhumb.interpolate('/wibble/{foo}', { foo: 'Hello%20bar' }), '/wibble/Hello%2520bar'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-})
-
 test('Interpolating should handle missing, null, undefined and empty param', function (t) {
   t.plan(4)
 

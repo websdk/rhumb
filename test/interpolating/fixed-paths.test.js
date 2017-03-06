@@ -1,64 +1,155 @@
-var test  = require('tape')
+var test = require('tape')
   , rhumb = require('../../src/rhumb')
 
-test('Interpolating should always infer root', function(t) {
-  t.plan(2)
+test('Interpolating should handle fixed parts', function(t) {
+  t.plan(10)
+  var cases = [
+        {
+          input: '/'
+        , expected: '/'
+        }
+      , {
+          input: '/foo'
+        , expected: '/foo'
+        }
+      , {
+          input: '/foo/'
+        , expected: '/foo'
+        }
+      , {
+          input: '/foo/bar/bing'
+        , expected: '/foo/bar/bing'
+        }
+      , {
+          input: '/foo/bar/bing/'
+        , expected: '/foo/bar/bing'
+        }
+      , {
+          input: ''
+        , expected: '/'
+        }
+      , {
+          input: 'foo'
+        , expected: '/foo'
+        }
+      , {
+          input: 'foo/'
+        , expected: '/foo'
+        }
+      , {
+          input: 'foo/bar/bing'
+        , expected: '/foo/bar/bing'
+        }
+      , {
+          input: 'foo/bar/bing/'
+        , expected: '/foo/bar/bing'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('', {}), '/'
-    , 'adds a slash when being interpolated')
-
-  t.equal(rhumb.interpolate('/', {}), '/'
-    , 'keeps the slash when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, {}), testCase.expected
+      , 'returns path without modification when being interpolated')
+  })
 })
 
-test('Interpolating should handle one fixed part', function(t) {
-  t.plan(2)
+test('Interpolating should handle fixed parts in optional parts', function (t) {
+  t.plan(12)
+  var cases = [
+        {
+          input: '/wibble(/)'
+        , expected: '/wibble'
+        }
+      , {
+          input: '/wibble(/foo)'
+        , expected: '/wibble/foo'
+        }
+      , {
+          input: '/wibble(/foo/)'
+        , expected: '/wibble/foo'
+        }
+      , {
+          input: '/wibble(/foo/bar)'
+        , expected: '/wibble/foo/bar'
+        }
+      , {
+          input: '/wibble(/foo/bar/)'
+        , expected: '/wibble/foo/bar'
+        }
+      , {
+          input: '/wibble/(/foo/)'
+        , expected: '/wibble/foo'
+        }
+      , {
+          input: 'wibble(/)'
+        , expected: '/wibble'
+        }
+      , {
+          input: 'wibble(/foo)'
+        , expected: '/wibble/foo'
+        }
+      , {
+          input: 'wibble(/foo/)'
+        , expected: '/wibble/foo'
+        }
+      , {
+          input: 'wibble(/foo/bar)'
+        , expected: '/wibble/foo/bar'
+        }
+      , {
+          input: 'wibble(/foo/bar/)'
+        , expected: '/wibble/foo/bar'
+        }
+      , {
+          input: 'wibble/(/foo/)'
+        , expected: '/wibble/foo'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('/foo', {}), '/foo'
-    , 'returns path without modification when being interpolated')
-
-  t.equal(rhumb.interpolate('/foo/', {}), '/foo'
-    , 'returns path without trailing slash when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, {}), testCase.expected
+      , 'includes optional path when being interpolated')
+  })
 })
 
-test('Interpolating should handle multiple fixed parts', function(t) {
-  t.plan(2)
+test('Interpolating should handle fixed parts in nested optional parts', function (t) {
+  t.plan(8)
+  var cases = [
+        {
+          input: '/wibble(/foo(/bing))'
+        , expected: '/wibble/foo/bing'
+        }
+      , {
+          input: '/wibble(/foo(/bing/))'
+        , expected: '/wibble/foo/bing'
+        }
+      , {
+          input: '/wibble(/foo(/bing/wobble))'
+        , expected: '/wibble/foo/bing/wobble'
+        }
+      , {
+          input: '/wibble(/foo(/bing/wobble/))'
+        , expected: '/wibble/foo/bing/wobble'
+        }
+      , {
+          input: 'wibble(/foo(/bing))'
+        , expected: '/wibble/foo/bing'
+        }
+      , {
+          input: 'wibble(/foo(/bing/))'
+        , expected: '/wibble/foo/bing'
+        }
+      , {
+          input: 'wibble(/foo(/bing/wobble))'
+        , expected: '/wibble/foo/bing/wobble'
+        }
+      , {
+          input: 'wibble(/foo(/bing/wobble/))'
+        , expected: '/wibble/foo/bing/wobble'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('/foo/bar/bing', {}), '/foo/bar/bing'
-    , 'returns path without modification when being interpolated')
-
-  t.equal(rhumb.interpolate('/foo/bar/bing/', {}), '/foo/bar/bing'
-    , 'returns path without trailing slash when being interpolated')
-})
-
-test('Interpolating should handle a path with no leading slash', function(t) {
-  t.plan(4)
-
-  t.equal(rhumb.interpolate('foo', {}), '/foo'
-  , 'returns path with leading slash when being interpolated')
-
-  t.equal(rhumb.interpolate('foo/bar/bing', {}), '/foo/bar/bing'
-    , 'returns path with leading slash when being interpolated')
-
-  t.equal(rhumb.interpolate('foo/', {}), '/foo'
-  , 'returns path without trailing slash and with leading slash when being interpolated')
-
-  t.equal(rhumb.interpolate('foo/bar/bing/', {}), '/foo/bar/bing'
-  , 'returns path without trailing slash and with leading slash when being interpolated')
-})
-
-test('Interpolating should handle a path with empty parts', function(t) {
-  t.plan(4)
-
-  t.equal(rhumb.interpolate('foo', {}), '/foo'
-  , 'returns path with leading slash when being interpolated')
-
-  t.equal(rhumb.interpolate('foo/bar/bing', {}), '/foo/bar/bing'
-    , 'returns path with leading slash when being interpolated')
-
-  t.equal(rhumb.interpolate('foo/', {}), '/foo'
-  , 'returns path without trailing slash and with leading slash when being interpolated')
-
-  t.equal(rhumb.interpolate('foo/bar/bing/', {}), '/foo/bar/bing'
-  , 'returns path without trailing slash and with leading slash when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, {}), testCase.expected
+      , 'includes optional path when being interpolated')
+  })
 })

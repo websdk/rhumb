@@ -271,39 +271,49 @@ function parse(ptn) {
   }
 }
 
-function isEmptyValue(val) {
-  return val === null || val === undefined || val === ''
+function tryReadingParamValue(params, key) {
+  if (!(key in params)) {
+    throw new Error('Invalid parameter: "' + key + '" is not supplied')
+  }
+
+  var value = params[key]
+  switch (value) {
+    case '':
+      throw new Error('Invalid parameter: "' + key + '" is an empty value')
+    case undefined:
+      throw new Error('Invalid parameter: "' + key + '" is undefined')
+    case null:
+      throw new Error('Invalid parameter: "' + key + '" is null')
+    default:
+      return value
+  }
 }
 
-function interpolateVar(uri, part, params){
-  var value = params[part.input]
-  if(isEmptyValue(value)) {
-    return uri
-  }
+function interpolateVar(uri, part, params) {
+  var value = tryReadingParamValue(params, part.input)
   return [uri, encode(value)].join("/")
 }
 
-function interpolateFixed(uri, part){
+function interpolateFixed(uri, part) {
   if(part.input === "/") {
     return uri
   }
   return [uri, part.input].join("/")
 }
 
-function interpolatePartial(uri, part, params){
+function interpolatePartial(uri, part, params) {
   var i = 0
-    , allPartialsPresent = true
     , match = part.name.replace(/\{var\}/g, function() {
         var varName = part.vars[i++]
-          , value = params[varName]
-        allPartialsPresent = allPartialsPresent && !isEmptyValue(value)
+          , value = tryReadingParamValue(params, varName)
         return encode(value)
       })
 
-  return allPartialsPresent ? [uri, match].join("/") : uri
+  return [uri, match].join("/")
 }
 
-function interpolateOptional(uri, optionalPart, params){
+function interpolateOptional(uri, optionalPart, params) {
+  try {
   return uri + optionalPart.reduce(
     function(path, part) {
       switch (part.type) {
@@ -317,6 +327,9 @@ function interpolateOptional(uri, optionalPart, params){
           return path ? interpolateOptional(path, part, params) : ''
       }
     }, '')
+  } catch (ex) {
+    return uri
+  }
 }
 
 function interpolate(ptn, params) {

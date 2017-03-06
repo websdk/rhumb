@@ -1,109 +1,179 @@
-var test  = require('tape')
+var test = require('tape')
   , rhumb = require('../../src/rhumb')
 
-test('Interpolating should return correct path for /page-{num}', function(t) {
-  t.plan(1)
+test('Interpolating should replace the values of non-empty partial variables', function (t) {
+  t.plan(12)
 
-  t.equal(rhumb.interpolate('/page-{num}', { num: 'four' }), '/page-four'
-    , 'returns path /page-four')
+  var cases = [
+        {
+          input: '/page-{foo}'
+        , expected: '/page-bing'
+        }
+      , {
+          input: '/page-{foo}/'
+        , expected: '/page-bing'
+        }
+      , {
+          input: '/{foo}.v1/wobble'
+        , expected: '/bing.v1/wobble'
+        }
+      , {
+          input: '/{foo}.v1/wobble/'
+        , expected: '/bing.v1/wobble'
+        }
+      , {
+          input: '/wibble/__{foo}__'
+        , expected: '/wibble/__bing__'
+        }
+      , {
+          input: '/wibble/__{foo}__/'
+        , expected: '/wibble/__bing__'
+        }
+      , {
+          input: 'page-{foo}'
+        , expected: '/page-bing'
+        }
+      , {
+          input: 'page-{foo}/'
+        , expected: '/page-bing'
+        }
+      , {
+          input: '{foo}.v1/wobble'
+        , expected: '/bing.v1/wobble'
+        }
+      , {
+          input: '{foo}.v1/wobble/'
+        , expected: '/bing.v1/wobble'
+        }
+      , {
+          input: 'wibble/__{foo}__'
+        , expected: '/wibble/__bing__'
+        }
+      , {
+          input: 'wibble/__{foo}__/'
+        , expected: '/wibble/__bing__'
+        }
+      ]
+
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, { foo: 'bing', bar: 'zap' }), testCase.expected
+      , 'returns path where partial variable substituted with their value')
+  })
 })
 
-test('Interpolating should return correct path for /page-{num}', function(t) {
-  t.plan(1)
+test('Interpolating should replace the values of non-empty partial variables in optional parts', function (t) {
+  t.plan(6)
 
-  t.equal(rhumb.interpolate('/page-{num}', { num: '4' }), '/page-4'
-    , 'returns path /page-4')
+  var cases = [
+        {
+          input: '/wibble(/{foo}-{bar})'
+        , expected: '/wibble/bing-zap'
+        }
+      , {
+          input: '/wibble(/{foo}-part/part-{bar})'
+        , expected: '/wibble/bing-part/part-zap'
+        }
+      , {
+          input: '/wibble/(/{foo}-{bar})'
+        , expected: '/wibble/bing-zap'
+        }
+      , {
+          input: '/wibble/(/{foo}-part/part-{bar})'
+        , expected: '/wibble/bing-part/part-zap'
+        }
+      , {
+          input: 'wibble(/{foo}-{bar})'
+        , expected: '/wibble/bing-zap'
+        }
+      , {
+          input: 'wibble(/{foo}-part/part-{bar})'
+        , expected: '/wibble/bing-part/part-zap'
+        }
+      ]
+
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, { foo: 'bing', bar: 'zap' }), testCase.expected
+      , 'returns path where partial variable substituted with their value')
+  })
 })
 
-test('Interpolating should return correct path for /i-{action}-you', function(t) {
-  t.plan(1)
+test('Interpolating should replace the values of non-empty partial variables in nested optional parts', function (t) {
+  t.plan(6)
 
-  t.equal(rhumb.interpolate('/i-{action}-you', { action: 'poke' }), '/i-poke-you'
-    , 'returns path /i-poke-you')
+  var cases = [
+        {
+          input: '/wibble(/{foo}-part(/part-{bar}))'
+        , expected: '/wibble/bing-part/part-zap'
+        }
+      , {
+          input: '/wibble(/{foo}-part(/part-{bar}(/part-{wobble}-part)))'
+        , expected: '/wibble/bing-part/part-zap/part-wobble-part'
+        }
+      , {
+          input: '/wibble(/{foo}-part/(/part-{bar}))'
+        , expected: '/wibble/bing-part/part-zap'
+        }
+      , {
+          input: '/wibble(/{foo}-part/(/part-{bar}(/part-{wobble}-part)))'
+        , expected: '/wibble/bing-part/part-zap/part-wobble-part'
+        }
+      , {
+          input: 'wibble(/{foo}-part(/part-{bar}))'
+        , expected: '/wibble/bing-part/part-zap'
+        }
+      , {
+          input: 'wibble(/{foo}-part(/part-{bar}(/part-{wobble}-part)))'
+        , expected: '/wibble/bing-part/part-zap/part-wobble-part'
+        }
+      ]
+
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, { foo: 'bing', bar: 'zap', wobble: 'wobble' }), testCase.expected
+      , 'returns path where partial variable substituted with their value')
+  })
 })
 
-test('Interpolating should return correct path for /fix/i-{action}-you/faff', function(t) {
-  t.plan(1)
+test('Interpolating should drop optional and nested optional parts that contain an empty, null, undefined and missing partial variables', function(t) {
+  t.plan(24)
 
-  t.equal(rhumb.interpolate('/fix/i-{action}-you/faff', { action: 'poke' }), '/fix/i-poke-you/faff'
-    , 'returns path /fix/i-poke-you/faff')
-})
+  var cases = [
+        {
+          input: '/wibble(/{foo}-end)'
+        , expected: '/wibble'
+        }
+      , {
+          input: '/wibble(/start-{foo})'
+        , expected: '/wibble'
+        }
+      , {
+          input: '/wibble(/start-{foo}-end)'
+        , expected: '/wibble'
+        }
+      , {
+          input: '/wibble(/{foo}-part)'
+        , expected: '/wibble'
+        }
+      , {
+          input: '/wibble(/{foo}-{bar}/wobble)'
+        , expected: '/wibble'
+        }
+      , {
+          input: '/wibble(/{foo}-{bar}/part-{bar})'
+        , expected: '/wibble'
+        }
+      ]
 
-test('Interpolating should return correct path for /fix/i-{action}-you/faff when param is empty', function(t) {
-  t.plan(1)
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, { foo: '', bar: 'wobble' }), testCase.expected
+      , 'returns path without the optional part when partial variable is empty')
 
-  t.equal(rhumb.interpolate('/fix/i-{action}-you/faff', { action: '' }), '/fix/faff'
-    , 'returns path /fix/i-poke-you/faff')
-})
+    t.equal(rhumb.interpolate(testCase.input, { bar: 'wobble' }), testCase.expected
+      , 'returns path without the optional part when partial variable is missing')
 
-test('Interpolating should return correct path for /{day}-{month}-{year}', function(t) {
-  t.plan(1)
+    t.equal(rhumb.interpolate(testCase.input, { foo: null, bar: 'wobble' }), testCase.expected
+      , 'returns path without the optional part when partial variable is null')
 
-  t.equal(rhumb.interpolate('/{day}-{month}-{year}', { day: 'mon', month: '01', year: '2020' }), '/mon-01-2020'
-    , 'returns path /mon-01-2020')
-})
-
-test('Interpolating should handle missing, null, undefined and empty param', function (t) {
-  t.plan(4)
-
-  t.equal(rhumb.interpolate('/foo-{bar}', {}), '/'
-    , 'returns path where missing partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/foo-{bar}', { bar: null }), '/'
-    , 'returns path where null partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/foo-{bar}', { bar: undefined }), '/'
-    , 'returns path where undefined partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/foo-{bar}', { bar: '' }), '/'
-    , 'returns path where empty partial part is removed when being interpolated')
-
-})
-
-test('Interpolating should handle missing, null, undefined and empty param after a fixed part', function (t) {
-  t.plan(4)
-
-  t.equal(rhumb.interpolate('/wibble/foo-{bar}-wobble', {}), '/wibble'
-    , 'returns path where missing partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/foo-{bar}-wobble', { bar: null }), '/wibble'
-    , 'returns path where null partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/foo-{bar}-wobble', { bar: undefined }), '/wibble'
-    , 'returns path where undefined partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/foo-{bar}-wobble', { bar: '' }), '/wibble'
-    , 'returns path where empty partial part is removed when being interpolated')
-})
-
-test('Interpolating should handle missing, null, undefined and empty param in the middle of the path', function (t) {
-  t.plan(4)
-
-  t.equal(rhumb.interpolate('/wibble/{foo}-bar/wobble', {}), '/wibble/wobble'
-    , 'returns path where missing partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{foo}-bar/wobble', { foo: null }), '/wibble/wobble'
-    , 'returns path where null partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{foo}-bar/wobble', { foo: undefined }), '/wibble/wobble'
-    , 'returns path where undefined partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{foo}-bar/wobble', { foo: '' }), '/wibble/wobble'
-    , 'returns path where empty partial part is removed when being interpolated')
-})
-
-test('Interpolating should handle missing, null, undefined and empty param with multiple partial variables', function (t) {
-  t.plan(4)
-
-  t.equal(rhumb.interpolate('/wibble/{day}-{month}-{year}', { month: '01', year: '2020' }), '/wibble'
-    , 'returns path where missing partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{day}-{month}-{year}', { day: null, month: '01', year: '2020' }), '/wibble'
-    , 'returns path where null partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{day}-{month}-{year}', { day: undefined, month: '01', year: '2020' }), '/wibble'
-    , 'returns path where undefined partial part is removed when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{day}-{month}-{year}', { day: '', month: '01', year: '2020' }), '/wibble'
-    , 'returns path where empty partial part is removed when being interpolated')
+    t.equal(rhumb.interpolate(testCase.input, { foo: undefined, bar: 'wobble' }), testCase.expected
+      , 'returns path without the optional part when partial variable is undefined')
+  })
 })

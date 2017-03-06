@@ -1,27 +1,26 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
 
-test('Interpolating should handle zero parts', function (t) {
-  t.plan(2)
-
-  t.equal(rhumb.interpolate('?q=value', {}), '/?q=value'
-    , 'adds a slash when being interpolated')
+test('Interpolating should handle query params on fixed paths', function (t) {
+  t.plan(5)
 
   t.equal(rhumb.interpolate('/?q=value', {}), '/?q=value'
-    , 'keeps the slash when being interpolated')
-})
-
-test('Interpolating should handle a fixed path with parts', function (t) {
-  t.plan(2)
+    , 'returns path without modification when being interpolated')
 
   t.equal(rhumb.interpolate('/foo?q=value', {}), '/foo?q=value'
     , 'returns path without modification when being interpolated')
 
   t.equal(rhumb.interpolate('/foo/bar/bing?q=value', {}), '/foo/bar/bing?q=value'
     , 'returns path without modification when being interpolated')
+
+  t.equal(rhumb.interpolate('/wibble?foo=bar&bing=value', {}), '/wibble?foo=bar&bing=value'
+    , 'returns path without modification when being interpolated')
+
+  t.equal(rhumb.interpolate('/wibble/wobble?foo=bar&bing=value', {}), '/wibble/wobble?foo=bar&bing=value'
+    , 'returns path without modification when being interpolated')
 })
 
-test('Interpolating should handle a optional path with parts', function (t) {
+test('Interpolating should handle query params on optional paths', function (t) {
   t.plan(2)
 
   t.equal(rhumb.interpolate('/wibble(/foo)?q=value', {}), '/wibble/foo?q=value'
@@ -38,16 +37,6 @@ test('Interpolating should handle a nested optional path with parts', function (
     , 'returns path without modification when being interpolated')
 
   t.equal(rhumb.interpolate('/wibble(/foo/bar(/bing))?q=value', {}), '/wibble/foo/bar/bing?q=value'
-    , 'returns path without modification when being interpolated')
-})
-
-test('Interpolating should handle multiple query params', function (t) {
-  t.plan(2)
-
-  t.equal(rhumb.interpolate('/wibble?foo=bar&bing=value', {}), '/wibble?foo=bar&bing=value'
-    , 'returns path without modification when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/wobble?foo=bar&bing=value', {}), '/wibble/wobble?foo=bar&bing=value'
     , 'returns path without modification when being interpolated')
 })
 

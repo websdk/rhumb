@@ -1,67 +1,132 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
 
-test('Interpolating should handle encoding of the name for a non-empty variable part', function (t) {
+test('Interpolating should handle encoding when a non-empty variable name contains special characters', function (t) {
   t.plan(3)
+  var cases = [
+        {
+          input: '/wibble/{date%2Dof%2Dbirth}'
+        , params: { 'date-of-birth': 'bar' }
+        , expected: '/wibble/bar'
+        }
+      , {
+          input: '/wibble/{ns%2Fname}'
+        , params: { 'ns/name': 'bar' }
+        , expected: '/wibble/bar'
+        }
+      , {
+          input: '/wibble/{ns%252Fname}'
+        , params: { 'ns%2Fname': 'bar' }
+        , expected: '/wibble/bar'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('/wibble/{date%2Dof%2Dbirth}', { 'date-of-birth': 'bar' }), '/wibble/bar'
-    , 'returns path where variable substituted value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{ns%2Fname}', { 'ns/name': 'bar' }), '/wibble/bar'
-    , 'returns path where variable substituted value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{ns%252Fname}', { 'ns%2Fname': 'bar' }), '/wibble/bar'
-    , 'returns path where variable substituted value when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, testCase.params), testCase.expected
+      , 'returns path where variable substituted value when being interpolated')
+  })
 })
 
-test('Interpolating should handle a non-empty variable part with a value needing encoding', function (t) {
+test('Interpolating should handle encoding of a non-empty variable value contains special characters', function (t) {
   t.plan(3)
+  var cases = [
+        {
+          input: '/wibble/{foo}'
+        , params: { foo: '@scope/package' }
+        , expected: '/wibble/%40scope%2Fpackage'
+        }
+      , {
+          input: '/wibble/{foo}'
+        , params: { foo: 'http://www.bing.com/search?q=query' }
+        , expected: '/wibble/http%3A%2F%2Fwww%2Ebing%2Ecom%2Fsearch%3Fq%3Dquery'
+        }
+      , {
+          input: '/wibble/{foo}'
+        , params: { foo: 'specialchars(*-_~!\')' }
+        , expected: '/wibble/specialchars%28%2A%2D%5F%7E%21%27%29'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('/wibble/{foo}', { foo: '@scope/package' }), '/wibble/%40scope%2Fpackage'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{foo}', { foo: 'http://www.bing.com/search?q=query' }), '/wibble/http%3A%2F%2Fwww%2Ebing%2Ecom%2Fsearch%3Fq%3Dquery'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/{foo}', { foo: 'specialchars(*-_~!\')' }), '/wibble/specialchars%28%2A%2D%5F%7E%21%27%29'
-    , 'returns path where variable substituted with encoded value when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, testCase.params), testCase.expected
+      , 'returns path where variable substituted with encoded value when being interpolated')
+  })
 })
 
-test('Interpolating should handle a non-empty partial part with a value needing encoding', function (t) {
+test('Interpolating should handle encoding of a non-empty partial variable value contains special characters', function (t) {
   t.plan(3)
+  var cases = [
+        {
+          input: '/wibble/foo-{bar}'
+        , params: { bar: 'Hello bar' }
+        , expected: '/wibble/foo-Hello%20bar'
+        }
+      , {
+          input: '/wibble/foo-{bar}'
+        , params: { bar: 'Hello%20bar' }
+        , expected: '/wibble/foo-Hello%2520bar'
+        }
+      , {
+          input: '/{day}-{month}-{year}'
+        , params: { day: '??', month: 'jan & may', year: '2020' }
+        , expected: '/%3F%3F-jan%20%26%20may-2020'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('/wibble/foo-{bar}', { bar: 'Hello bar' }), '/wibble/foo-Hello%20bar'
-    , 'returns path where partial variables substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble/foo-{bar}', { bar: 'Hello%20bar' }), '/wibble/foo-Hello%2520bar'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/{day}-{month}-{year}', { day: '??', month: 'jan & may', year: '2020' }), '/%3F%3F-jan%20%26%20may-2020'
-    , 'returns path where variable substituted with encoded value when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, testCase.params), testCase.expected
+      , 'returns path where variable substituted with encoded value when being interpolated')
+  })
 })
 
-test('Interpolating should handle a non-empty variable part inside an optional path with a value needing encoding', function (t) {
+test('Interpolating should handle encoding of a non-empty variable value contains special characters inside an optional path', function (t) {
   t.plan(3)
+  var cases = [
+        {
+          input: '/wibble/{foo}'
+        , params: { foo: '@scope/package' }
+        , expected: '/wibble/%40scope%2Fpackage'
+        }
+      , {
+          input: '/wibble/{foo}'
+        , params: { foo: 'http://www.bing.com/search?q=query' }
+        , expected: '/wibble/http%3A%2F%2Fwww%2Ebing%2Ecom%2Fsearch%3Fq%3Dquery'
+        }
+      , {
+          input: '/wibble/{foo}'
+        , params: { foo: 'specialchars(*-_~!\')' }
+        , expected: '/wibble/specialchars%28%2A%2D%5F%7E%21%27%29'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('/wibble(/{foo})', { foo: '@scope/package' }), '/wibble/%40scope%2Fpackage'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble(/{foo})', { foo: 'http://www.bing.com/search?q=query' }), '/wibble/http%3A%2F%2Fwww%2Ebing%2Ecom%2Fsearch%3Fq%3Dquery'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble(/{foo})', { foo: 'specialchars(*-_~!\')' }), '/wibble/specialchars%28%2A%2D%5F%7E%21%27%29'
-    , 'returns path where variable substituted with encoded value when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, testCase.params), testCase.expected
+      , 'returns path where variable substituted with encoded value when being interpolated')
+  })
 })
 
-test('Interpolating should handle a non-empty partial part inside an optional path with a value needing encoding', function (t) {
+test('Interpolating should handle encoding of a non-empty partial variable value contains special characters inside an optional path', function (t) {
   t.plan(3)
+  var cases = [
+        {
+          input: '/wibble(/foo-{bar})'
+        , params: { bar: 'Hello bar' }
+        , expected: '/wibble/foo-Hello%20bar'
+        }
+      , {
+          input: '/wibble(/foo-{bar})'
+        , params: { bar: 'Hello%20bar' }
+        , expected: '/wibble/foo-Hello%2520bar'
+        }
+      , {
+          input: '/wibble(/{day}-{month}-{year})'
+        , params: { day: '??', month: 'jan & may', year: '2020' }
+        , expected: '/wibble/%3F%3F-jan%20%26%20may-2020'
+        }
+      ]
 
-  t.equal(rhumb.interpolate('/wibble(/foo-{bar})', { bar: 'Hello bar' }), '/wibble/foo-Hello%20bar'
-    , 'returns path where partial variables substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble(/foo-{bar})', { bar: 'Hello%20bar' }), '/wibble/foo-Hello%2520bar'
-    , 'returns path where variable substituted with encoded value when being interpolated')
-
-  t.equal(rhumb.interpolate('/wibble(/{day}-{month}-{year})', { day: '??', month: 'jan & may', year: '2020' }), '/wibble/%3F%3F-jan%20%26%20may-2020'
-    , 'returns path where variable substituted with encoded value when being interpolated')
+  cases.forEach(function (testCase) {
+    t.equal(rhumb.interpolate(testCase.input, testCase.params), testCase.expected
+      , 'returns path where partial variables substituted with encoded value when being interpolated')
+  })
 })

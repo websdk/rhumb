@@ -1,41 +1,42 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
-
-var root = { type: 'fixed', input: '/' }
+  , utils = require('../utils')
 
 test("Parsing should find single variable part", function(t) {
-  var out = rhumb._parse("/{wibble}")
+  t.plan(1)
 
-  t.plan(2)
-  t.ok(out)
-  t.deepEqual(out,
-    [ root, { type: "var", input: "wibble" } ]
-  )
+  var parts = [
+        utils.rootPart()
+      , utils.varPart('foo')
+      ]
+
+  t.deepEqual(rhumb._parse('/{foo}'), parts
+    , 'returns a root part and variable part when being parsed')
 })
 
 test("Parsing should find multiple variable parts", function(t) {
-  var out = rhumb._parse("/{wibble}/{wobble}")
+  t.plan(1)
 
-  t.plan(2)
-  t.ok(out)
-  t.deepEqual(out,
-    [ root
-    , { type: "var", input: "wibble" }
-    , { type: "var", input: "wobble" }
-    ]
-  )
+  var parts = [
+        utils.rootPart()
+      , utils.fixedPart('wibble')
+      , utils.fixedPart('wobble')
+      ]
+
+  t.deepEqual(rhumb._parse('/wibble/wobble'), parts
+    , 'returns a root part and two fixed parts when being parsed')
 })
 
 test("Parsing should find variable and fixed parts", function(t) {
-  var out = rhumb._parse("/{wibble}/bar/{wobble}")
+  t.plan(1)
 
-  t.plan(2)
-  t.ok(out)
-  t.deepEqual(out,
-    [ root
-    , { type: "var", input: "wibble" }
-    , { type: "fixed", input: "bar" }
-    , { type: "var", input: "wobble" }
-    ]
-  )
+  var parts = [
+        utils.rootPart()
+      , utils.varPart('wibble')
+      , utils.fixedPart('bar')
+      , utils.varPart('wobble')
+      ]
+
+  t.deepEqual(rhumb._parse('/{wibble}/bar/{wobble}'), parts
+    , 'returns a root part, two fixed parts and a variable part when being parsed')
 })

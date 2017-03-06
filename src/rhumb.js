@@ -2,7 +2,7 @@ function findIn(parts, tree){
   var params = {}
 
   var find = function(remaining, node){
-    
+
     var part = remaining.shift()
 
     if(!part) return node.leaf || false;
@@ -17,27 +17,27 @@ function findIn(parts, tree){
             if(partial.ptn.test(part)){
               var match = part.match(partial.ptn)
               partial.vars.forEach(function(d, i){
-                params[d] = match[i+1]
+                params[d] = decode(match[i + 1])
               })
               node = partial
               return true
             }
           })
-          
+
       if(found){
         return find(remaining, node)
       }
     }
 
-    if(node['var']){
-      params[node['var'].name] = part
-      return find(remaining, node['var'])
+    if(node["var"]){
+      params[node["var"].name] = decode(part)
+      return find(remaining, node["var"])
     }
     return false
   }
 
   var found = find(parts, tree, params)
-  
+
   if(found){
     return {
       fn : found
@@ -49,7 +49,7 @@ function findIn(parts, tree){
 
 function create (){
   var router = {}
-    , tree   = {}  
+    , tree   = {}
 
   function updateTree(parts, node, fn){
     var part = parts.shift()
@@ -62,7 +62,7 @@ function create (){
       return
     }
 
-    if (!part) return 
+    if (!part) return
 
     if (part.type === "fixed") {
       node.fixed || (node.fixed = {})
@@ -94,7 +94,7 @@ function create (){
       peek.vars = part.vars
 
       node.partial.names[part.name] = peek
-      node.partial.tests.push(peek)  
+      node.partial.tests.push(peek)
     }
 
     if (!more) {
@@ -109,9 +109,10 @@ function create (){
   }
 
   router.match = function(path){
-    
+
     var split = path.split("?").filter(falsy)
-      , parts = ['/'].concat(split[0].split("/").filter(falsy))
+      , pathWithoutQueryString = split[0] || ''
+      , parts = ['/'].concat(pathWithoutQueryString.split("/").filter(falsy))
       , params = parseQueryString(split[1])
       , match = findIn(parts, tree)
 
@@ -121,7 +122,7 @@ function create (){
       }
       return match.fn.apply(match.fn, [params])
     }
-  }   
+  }
   return router
 }
 
@@ -129,20 +130,40 @@ function falsy(d){
   return !!d
 }
 
+function decode(value) {
+  try {
+    return decodeURIComponent(value)
+  } catch (err) {
+    return value
+  }
+}
+
+function encode(value) {
+  return encodeURIComponent(value)
+    .replace(/!/g, '%21')
+    .replace(/'/g, '%27')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29')
+    .replace(/\*/g, '%2A')
+    .replace(/-/g, '%2D')
+    .replace(/\./g, '%2E')
+    .replace(/_/g, '%5F')
+    .replace(/~/g, '%7E')
+}
+
 function parseQueryString(s) {
   if(!s) return {}
   return s.split("&").filter(falsy).reduce(function(qs, kv) {
-    var pair = kv.split('=').filter(falsy)
+    var pair = kv.split('=').filter(falsy).map(decode)
     qs[pair[0]] = pair[1]
     return qs
   }, {})
 }
 
-
-function parse(ptn){
-  var variable  = /^{(\w+)}$/
-    , partial   = /([\w'-]+)?{([\w-]+)}([\w'-]+)?/
-    , bracks    = /^[)]+/
+function parse(ptn) {
+  var variable = /^{([A-Za-z0-9%]+)}$/
+    , partial = /([\w!'*\-.~%]+)?{([A-Za-z0-9%]+)}([\w!'*\-.~%]+)?/
+    , bracks = /^[)]+/
 
   return ~ptn.indexOf('(')? parseOptional(ptn) : parsePtn(ptn)
 
@@ -150,7 +171,7 @@ function parse(ptn){
     var match = part.match(variable)
     return {
       type: "var"
-    , input: match[1]
+    , input: decode(match[1])
     }
   }
 
@@ -174,7 +195,7 @@ function parse(ptn){
         ptn += match[1]
       }
 
-      ptn += "([\\w-]+)"
+      ptn += '([A-Za-z0-9%]+)'
 
       if(match[3]){
         ptn += match[3]
@@ -185,13 +206,13 @@ function parse(ptn){
 
     var vars = []
       , name = part.replace(
-      /{([\w-]+)}/g
+      /{([A-Za-z0-9%]+)}/g
     , function(p, d){
-        vars.push(d)
+        vars.push(decode(d))
         return "{var}"
       }
     )
-    
+
     return {
       type: "partial"
     , input: new RegExp(ptn)
@@ -242,7 +263,7 @@ function parse(ptn){
       if(next.length){
         list.push(
           next
-        )  
+        )
       }
     }
 
@@ -250,8 +271,91 @@ function parse(ptn){
   }
 }
 
+function tryReadingParamValue(params, key) {
+  if (!(key in params)) {
+    throw new Error('Invalid parameter: "' + key + '" is not supplied')
+  }
+
+  var value = params[key]
+  switch (value) {
+    case '':
+      throw new Error('Invalid parameter: "' + key + '" is an empty value')
+    case undefined:
+      throw new Error('Invalid parameter: "' + key + '" is undefined')
+    case null:
+      throw new Error('Invalid parameter: "' + key + '" is null')
+    default:
+      return value
+  }
+}
+
+function interpolateVar(uri, part, params) {
+  var value = tryReadingParamValue(params, part.input)
+  return [uri, encode(value)].join("/")
+}
+
+function interpolateFixed(uri, part) {
+  if(part.input === "/") {
+    return uri
+  }
+  return [uri, part.input].join("/")
+}
+
+function interpolatePartial(uri, part, params) {
+  var i = 0
+    , match = part.name.replace(/\{var\}/g, function() {
+        var varName = part.vars[i++]
+          , value = tryReadingParamValue(params, varName)
+        return encode(value)
+      })
+
+  return [uri, match].join("/")
+}
+
+function interpolateOptional(uri, optionalPart, params) {
+  try {
+  return uri + optionalPart.reduce(
+    function(path, part) {
+      switch (part.type) {
+        case "var":
+          return interpolateVar(path, part, params)
+        case "partial":
+          return interpolatePartial(path, part, params)
+        case "fixed":
+          return interpolateFixed(path, part)
+        default:
+          return path ? interpolateOptional(path, part, params) : ''
+      }
+    }, '')
+  } catch (ex) {
+    return uri
+  }
+}
+
+function interpolate(ptn, params) {
+  var parts = ptn.split("?")
+
+  parts[0] = parse(parts[0]).reduce(
+    function(uri, part) {
+      switch (part.type) {
+        case "var":
+          return interpolateVar(uri, part, params)
+        case "partial":
+          return interpolatePartial(uri, part, params)
+        case "fixed":
+          return interpolateFixed(uri, part)
+        default:
+          return interpolateOptional(uri, part, params)
+      }
+    }
+  , ""
+  ) || "/"
+  return parts.filter(falsy).join("?")
+}
+
 var rhumb = create()
 rhumb.create = create
+rhumb.interpolate = interpolate
 rhumb._parse = parse
 rhumb._findInTree = findIn
 

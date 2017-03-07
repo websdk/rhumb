@@ -50,7 +50,7 @@ function create() {
   var router = {}
     , tree = {}
 
-  function updateTree(part, node, fn) {
+  function updateTree(part, node, route, fn) {
     var segment = part.segments.shift()
       , more = !!part.segments.length
       , peek
@@ -69,7 +69,7 @@ function create() {
         throw new Error('Ambiguity')
       }
       node.leaf = fn
-      updateTree(segment, node, fn)
+      updateTree(segment, node, route, fn)
       return
     }
 
@@ -114,17 +114,17 @@ function create() {
         node.partial.tests.push(peek)
         break
       case 'empty':
-        throw new Error('Ambiguity')
+        throw new InvalidRouteException('Must not contain an empty segment', route)
     }
     if (!more) {
       peek.leaf = fn
     } else {
-      updateTree(part, peek, fn)
+      updateTree(part, peek, route, fn)
     }
   }
 
-  router.add = function (ptn, callback) {
-      updateTree(parse(ptn), tree, callback)
+  router.add = function (route, callback) {
+      updateTree(parse(route), tree, route, callback)
   }
 
   router.match = function(path){
@@ -141,6 +141,16 @@ function create() {
     }
   }
   return router
+}
+
+function InvalidRouteException(message, route) {
+  this.message = message
+  this.name = 'InvalidRouteException'
+  this.route = route
+
+  this.toString = function () {
+    return 'Invalid route: ' + message
+  }
 }
 
 function falsy(d){

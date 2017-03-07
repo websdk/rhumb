@@ -1,52 +1,151 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
+  , utils = require('../utils')
 
-var root = { type: 'fixed', input: '/' }
+test('Parsing should handle an optional part covering the whole path', function (t) {
+  t.plan(3)
 
-test("Parsing should find optional part at end of path", function(t){
-  var out = rhumb._parse("/one/two(/three)")
+  t.deepEqual(rhumb._parse('(/foo)').segments, [
+    utils.optionalPart([utils.fixedSegment('foo')], true)
+  ], 'one optional part with one fixed segment found')
 
-  t.plan(2)
-  t.ok(out)
-  t.deepEqual(out,
-    [ root
-    , { type: "fixed", input: "one"}
-    , { type: "fixed", input: "two"}
-    , [ { type: "fixed", input: "three"} ]
-    ]
-  )
+  t.notOk(rhumb._parse('(/foo)').leadingSlash, 'has no leading slash')
+  t.notOk(rhumb._parse('(/foo)').trailingSlash, 'has no trailing slash')
 })
 
-test("Parsing should find nested optional elements at end of path", function(t){
-  var out = rhumb._parse("/one/two(/three/four(/five))")
+test('Parsing should find optional part at end of path', function (t) {
+  t.plan(6)
 
-  t.plan(2)
-  t.ok(out)
-  t.deepEqual(out,
-    [ root
-    , { type: "fixed", input: "one"}
-    , { type: "fixed", input: "two"}
-    , [ { type: "fixed", input: "three"}
-      , { type: "fixed", input: "four"}
-      , [ { type: "fixed", input: "five"} ]
-      ]
-    ]
-  )
+  t.deepEqual(rhumb._parse('/wibble(/foo)').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([utils.fixedSegment('foo')], true)
+  ], 'has a fixed segment followed by an optional part that has one fixed segment')
+
+  t.deepEqual(rhumb._parse('/wibble(/foo/bar)').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([utils.fixedSegment('foo'), utils.fixedSegment('bar')], true)
+], 'has a fixed segment followed by an optional part that has two fixed segments')
+
+  t.ok(rhumb._parse('/wibble(/foo)').leadingSlash, 'has a leading slash')
+  t.notOk(rhumb._parse('/wibble(/foo)').trailingSlash, 'has no trailing slash')
+
+  t.ok(rhumb._parse('/wibble(/foo/bar)').leadingSlash, 'has a leading slash')
+  t.notOk(rhumb._parse('/wibble(/foo/bar)').trailingSlash, 'has no trailing slash')
+})
+
+test('Parsing should find nested optional elements at end of path', function (t){
+  t.plan(1)
+
+  t.deepEqual(rhumb._parse('/wibble(/foo(/bar))').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([
+      utils.fixedSegment('foo')
+    , utils.optionalPart([utils.fixedSegment('bar')], true)
+    ], true)
+  ], 'has a fixed segment followed by an nested optional parts')
 })
 
 /*
 TODO: later :)
-test("should find optional elements anywhere in path", function(t){
-  var out = rhumb._parse("/one/two(/three)/gogogo")
+test('should find optional elements anywhere in path', function (t){
+  t.plan(1)
 
-  t.plan(2)
-  t.ok(out)
-  t.deepEqual(out,
-    [ { type: "fixed", input: "one"}
-    , { type: "fixed", input: "two"}
-    , [ { type: "fixed", input: "three"} ]
-    , { type: "fixed", input: "gogogo"}
-    ]
-  )
+  t.deepEqual(rhumb._parse('/wibble/foo(/bar)/bing').segments, [
+    utils.fixedSegment('wibble')
+  , utils.fixedSegment('foo')
+  , utils.optionalPart([utils.fixedSegment('bar')], true)
+  , utils.fixedSegment('bing')
+  ])
 })
 */
+
+test('Parsing should handle a path with fixed part and variable optional part', function (t) {
+  t.plan(2)
+
+  t.deepEqual(rhumb._parse('/wibble(/{foo})').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([utils.varSegment('foo')], true)
+  ], 'has a fixed segment followed by an optional part that has one variable segment')
+
+  t.deepEqual(rhumb._parse('/wibble(/{foo}/{bar})').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([utils.varSegment('foo'), utils.varSegment('bar')], true)
+  ], 'has a fixed segment followed by an optional part that has two variable segments')
+})
+
+test('Parsing should handle a path with fixed part and single partial optional part', function (t) {
+  t.plan(2)
+
+  var results = [
+        rhumb._parse('/wibble(/{foo}-{bar})')
+      , rhumb._parse('/wibble(/{foo}-part/part-{bar})')
+      ]
+    , matchFunctions = results.map(function (result) {
+        return result.segments[1].segments.map(function (segment) {
+          return segment.matchFunction
+        })
+      })
+
+  t.deepEqual(results[0].segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([
+      utils.partialSegment('{var}-{var}', ['foo', 'bar'], matchFunctions[0][0])
+    ], true)
+  ], 'has a fixed segment followed by an optional part that has one variable segment')
+
+  t.deepEqual(results[1].segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([
+      utils.partialSegment('{var}-part', ['foo'], matchFunctions[1][0])
+    , utils.partialSegment('part-{var}', ['bar'], matchFunctions[1][1])
+    ], true)
+  ], 'has a fixed segment followed by an optional part that has two variable segments')
+})
+
+test('Parsing should handle a path with trailing slash in fixed path and leading slash in the optional path', function (t) {
+  t.plan(1)
+
+  t.deepEqual(rhumb._parse('/wibble/(/foo)').segments, [
+      utils.fixedSegment('wibble')
+    , utils.optionalPart([utils.fixedSegment('foo')], true)
+    ], 'returns a root part, a fixed part and one optional part when being parsed')
+})
+
+test('Optional paths should handle a path with empty parts', function (t) {
+  t.plan(3)
+
+  t.deepEqual(rhumb._parse('/wibble(//bar/bing)').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([
+      utils.emptySegment()
+    , utils.fixedSegment('bar')
+    , utils.fixedSegment('bing')
+    ], true)
+  ], 'ignores empty part at the start of the path when being parsed')
+
+  t.deepEqual(rhumb._parse('/wibble(/foo//bing)').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([
+      utils.fixedSegment('foo')
+    , utils.emptySegment()
+    , utils.fixedSegment('bing')
+    ], true)
+  ], 'ignores empty part in the middle of the path when being parsed')
+
+  t.deepEqual(rhumb._parse('/wibble(/foo/bar//)').segments, [
+    utils.fixedSegment('wibble')
+  , utils.optionalPart([
+      utils.fixedSegment('foo')
+    , utils.fixedSegment('bar')
+    , utils.emptySegment()
+    ], true, true)
+  ], 'ignores empty part at the end of the path when being parsed')
+})
+
+test('Parsing should handle a path with empty optional part', function (t) {
+  t.plan(1)
+
+  t.deepEqual(rhumb._parse('/wibble()').segments, [
+    utils.fixedSegment('wibble()')
+  ], 'ignores empty optional path when being parsed')
+})

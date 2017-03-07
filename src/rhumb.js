@@ -124,7 +124,11 @@ function create() {
   }
 
   router.add = function (route, callback) {
-      updateTree(parse(route), tree, route, callback)
+    var parsedRoute = parse(route)
+    if (Object.keys(parsedRoute.queryParams).length > 0) {
+      throw new InvalidRouteException('Must not contain a query string', route)
+    }
+    updateTree(parsedRoute, tree, route, callback)
   }
 
   router.match = function(path){
@@ -283,8 +287,14 @@ function parseOptional(ptn) {
   return parsedOutput
 }
 
-function parse(ptn){
-  return ptn.indexOf('(/') > -1 ? parseOptional(ptn) : parsePtn(ptn)
+function parse(route) {
+  var split = route.split('?')
+    , parsedPath = split[0].indexOf('(/') > -1
+        ? parseOptional(split[0])
+        : parsePtn(split[0])
+
+  parsedPath.queryParams = parseQueryString(split[1])
+  return parsedPath
 }
 
 var rhumb = create()

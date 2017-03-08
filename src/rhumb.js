@@ -1,21 +1,34 @@
-function findIn(parts, tree) {
-  var params = {}
+function findIn(path, tree) {
+  var parsedPath = parse(path)
 
-  var find = function (remaining, node) {
-    var part = remaining.shift()
+  var find = function (part, node, params) {
+    var segment = part.segments.shift()
 
-    if (!part) {
-      return node.leaf || false
+    if (!segment) {
+      return node.leaf ? { fn: node.leaf, params: params } : false
     }
 
-    if (node.fixed && part in node.fixed) {
-      return find(remaining, node.fixed[part])
+    switch (segment.type) {
+      case 'fixed':
+        break
+      case 'var':
+        throw new InvalidPathException('Must not contain a variable segment', path)
+      case 'partial':
+        throw new InvalidPathException('Must not contain a partial variable segment', path)
+      case 'empty':
+        throw new InvalidPathException('Must not contain an empty segment', path)
+      default:
+        throw new InvalidPathException('Must not contain an optional path', path)
+    }
+
+    if (node.fixed && segment.identifier in node.fixed) {
+      return find(part, node.fixed[segment.identifier], params)
     }
 
     if (node.partial) {
       var tests = node.partial.tests
         , found = tests.map(function (partial) {
-          var params = partial.matchFunction(part)
+          var params = partial.matchFunction(segment.identifier)
             return params ? { partial: partial, params: params } : null
           }).filter(falsy)
         , matchingPartial = found.length > 0 ? found[0] : null
@@ -24,26 +37,18 @@ function findIn(parts, tree) {
         for (var key in matchingPartial.params) {
           params[key] = matchingPartial.params[key]
         }
-        return find(remaining, matchingPartial.partial)
+        return find(part, matchingPartial.partial, params)
       }
     }
 
     if (node.variable) {
-      params[node.variable.identifier] = part
-      return find(remaining, node.variable)
+      params[node.variable.identifier] = segment.identifier
+      return find(part, node.variable, params)
     }
     return false
   }
 
-  var found = find(parts, tree, params)
-
-  if (found) {
-    return {
-      fn : found
-    , params : params
-    }
-  }
-  return false
+  return find(parsedPath, tree, parsedPath.queryParams)
 }
 
 function create() {
@@ -131,17 +136,11 @@ function create() {
     updateTree(parsedRoute, tree, route, callback)
   }
 
-  router.match = function(path){
-    var split = path.split("?").filter(falsy)
-      , parts = split[0].split('/').filter(falsy)
-      , params = parseQueryString(split[1])
-      , match = findIn(parts, tree)
+  router.match = function(path) {
+    var match = findIn(path, tree)
 
-    if(match){
-      for (var prop in match.params) {
-        params[prop] = match.params[prop]
-      }
-      return match.fn.apply(match.fn, [params])
+    if (match) {
+      return match.fn.apply(match.fn, [match.params])
     }
   }
   return router
@@ -154,6 +153,16 @@ function InvalidRouteException(message, route) {
 
   this.toString = function () {
     return 'Invalid route: ' + message
+  }
+}
+
+function InvalidPathException(message, path) {
+  this.message = message
+  this.name = 'InvalidPathException'
+  this.path = path
+
+  this.toString = function () {
+    return 'Invalid path: ' + message
   }
 }
 

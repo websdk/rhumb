@@ -1,5 +1,6 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
+  , partialVariableSegmentPathError = /Invalid path: Must not contain a partial variable segment/
 
 test("Routing should match /page-{num} with path /page-four", function(t) {
   t.plan(1)
@@ -56,4 +57,24 @@ test("Routing should match /{day}-{month}-{year} with path /mon-01-2020", functi
   })
 
   router.match("mon-01-2020")
+})
+
+test('Routing should throw an error for matching paths with partial variable segments', function (t) {
+  t.plan(3)
+  var router = rhumb.create()
+
+  router.add('/{foo}-part', function () {})
+  router.add('/part-{foo}/{bar}-part', function () {})
+
+  t.throws(function () {
+    router.match('/{foo}-part')
+  }, partialVariableSegmentPathError)
+
+  t.throws(function () {
+    router.match('/part-{foo}/bing-part')
+  }, partialVariableSegmentPathError)
+
+  t.throws(function () {
+    router.match('/part-foo/{bar}-part')
+  }, partialVariableSegmentPathError)
 })

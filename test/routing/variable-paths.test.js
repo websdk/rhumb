@@ -1,5 +1,6 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
+  , variableSegmentPathError = /Invalid path: Must not contain a variable segment/
 
 test("Routing should match /{foo} with path /bar", function(t) {
   t.plan(1)
@@ -52,4 +53,24 @@ test("Routing should match /foo/{bar} and /foo/{bar}/{baz} as different paths", 
 
   router.match("/foo/one")
   router.match("/foo/two/three")
+})
+
+test('Routing should throw an error for matching paths with variable segments', function (t) {
+  t.plan(3)
+  var router = rhumb.create()
+
+  router.add('/{foo}', function () {})
+  router.add('/{foo}/{bar}', function () {})
+
+  t.throws(function () {
+    router.match('/{foo}')
+  }, variableSegmentPathError)
+
+  t.throws(function () {
+    router.match('/{foo}/bing')
+  }, variableSegmentPathError)
+
+  t.throws(function () {
+    router.match('/foo/{bar}')
+  }, variableSegmentPathError)
 })

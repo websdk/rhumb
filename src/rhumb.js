@@ -1,128 +1,169 @@
-function findIn(parts, tree){
-  var params = {}
+function findIn(path, tree) {
+  var parsedPath = parse(path)
 
-  var find = function(remaining, node){
-    
-    var part = remaining.shift()
+  var find = function (part, node, params) {
+    var segment = part.segments.shift()
 
-    if(!part) return node.leaf || false;
-
-    if(node.fixed && part in node.fixed){
-      return find(remaining, node.fixed[part])
+    if (!segment) {
+      return node.leaf ? { fn: node.leaf, params: params } : false
     }
 
-    if(node.partial){
+    switch (segment.type) {
+      case 'fixed':
+        break
+      case 'var':
+        throw new InvalidPathException('Must not contain a variable segment', path)
+      case 'partial':
+        throw new InvalidPathException('Must not contain a partial variable segment', path)
+      case 'empty':
+        throw new InvalidPathException('Must not contain an empty segment', path)
+      default:
+        throw new InvalidPathException('Must not contain an optional path', path)
+    }
+
+    if (node.fixed && segment.identifier in node.fixed) {
+      return find(part, node.fixed[segment.identifier], params)
+    }
+
+    if (node.partial) {
       var tests = node.partial.tests
-        , found = tests.some(function(partial){
-            if(partial.ptn.test(part)){
-              var match = part.match(partial.ptn)
-              partial.vars.forEach(function(d, i){
-                params[d] = match[i+1]
-              })
-              node = partial
-              return true
-            }
-          })
-          
-      if(found){
-        return find(remaining, node)
+        , found = tests.map(function (partial) {
+          var params = partial.matchFunction(segment.identifier)
+            return params ? { partial: partial, params: params } : null
+          }).filter(falsy)
+        , matchingPartial = found.length > 0 ? found[0] : null
+
+      if (matchingPartial) {
+        for (var key in matchingPartial.params) {
+          params[key] = matchingPartial.params[key]
+        }
+        return find(part, matchingPartial.partial, params)
       }
     }
 
-    if(node['var']){
-      params[node['var'].name] = part
-      return find(remaining, node['var'])
+    if (node.variable) {
+      params[node.variable.identifier] = segment.identifier
+      return find(part, node.variable, params)
     }
     return false
   }
 
-  var found = find(parts, tree, params)
-  
-  if(found){
-    return {
-      fn : found
-    , params : params
-    }
-  }
-  return false
+  return find(parsedPath, tree, parsedPath.queryParams)
 }
 
-function create (){
+function create() {
   var router = {}
-    , tree   = {}  
+    , tree = {}
 
-  function updateTree(parts, node, fn){
-    var part = parts.shift()
-      , more = !!parts.length
+  function updateTree(part, node, route, fn) {
+    var segment = part.segments.shift()
+      , more = !!part.segments.length
       , peek
 
-    if (Array.isArray(part)) {
+    if (!segment) {
+      if (node.leaf) {
+        throw new Error('Ambiguity')
+      }
+
       node.leaf = fn
-      updateTree(part, node, fn)
       return
     }
 
-    if (!part) return 
-
-    if (part.type === "fixed") {
-      node.fixed || (node.fixed = {})
-      peek = node.fixed[part.input] || (node.fixed[part.input] = {})
-
-      if (peek.leaf && !more) {
-        throw new Error("Ambiguity")
+    if (Array.isArray(segment.segments)) {
+      if (node.leaf) {
+        throw new Error('Ambiguity')
       }
-    } else if(part.type === "var") {
-      if (node['var']) {
-        if (node['var'].name === part.input) {
-          peek = node['var']
-        } else {
-          throw new Error("Ambiguity")
-        }
-      } else {
-        peek = node['var'] = { name : part.input }
-      }
-    } else if (part.type = "partial") {
-      if (node.partial) {
-        if (node.partial.names[part.name]) {
-          throw new Error("Ambiguity")
-        }
-      }
-      node.partial || (node.partial = { names : {}, tests : [] })
-
-      peek = {}
-      peek.ptn = part.input
-      peek.vars = part.vars
-
-      node.partial.names[part.name] = peek
-      node.partial.tests.push(peek)  
+      node.leaf = fn
+      updateTree(segment, node, route, fn)
+      return
     }
 
+    switch (segment.type) {
+      case 'fixed':
+        if (!node.fixed) {
+          node.fixed = {}
+        }
+        if (!node.fixed[segment.identifier]) {
+          node.fixed[segment.identifier] = {}
+        }
+        peek = node.fixed[segment.identifier]
+
+        if (peek.leaf && !more) {
+          throw new Error('Ambiguity')
+        }
+        break
+      case 'var':
+        if (node.variable) {
+          if (node.variable.identifier === segment.identifier) {
+            peek = node.variable
+          } else {
+            throw new Error('Ambiguity')
+          }
+        } else {
+          node.variable = { identifier: segment.identifier }
+          peek = node.variable
+        }
+        break
+      case 'partial':
+        if (node.partial) {
+          if (node.partial.identifiers[segment.identifier]) {
+            throw new Error('Ambiguity')
+          }
+        } else {
+          node.partial = { identifiers: {}, tests: [] }
+        }
+
+        peek = { matchFunction: segment.matchFunction }
+
+        node.partial.identifiers[segment.identifier] = peek
+        node.partial.tests.push(peek)
+        break
+      case 'empty':
+        throw new InvalidRouteException('Must not contain an empty segment', route)
+    }
     if (!more) {
       peek.leaf = fn
     } else {
-      updateTree(parts, peek, fn)
+      updateTree(part, peek, route, fn)
     }
   }
 
-  router.add = function(ptn, callback){
-      updateTree(parse(ptn), tree, callback)
+  router.add = function (route, callback) {
+    var parsedRoute = parse(route)
+    if (Object.keys(parsedRoute.queryParams).length > 0) {
+      throw new InvalidRouteException('Must not contain a query string', route)
+    }
+    updateTree(parsedRoute, tree, route, callback)
   }
 
-  router.match = function(path){
-    
-    var split = path.split("?").filter(falsy)
-      , parts = ['/'].concat(split[0].split("/").filter(falsy))
-      , params = parseQueryString(split[1])
-      , match = findIn(parts, tree)
+  router.match = function(path) {
+    var match = findIn(path, tree)
 
-    if(match){
-      for (var prop in match.params) {
-        params[prop] = match.params[prop]
-      }
-      return match.fn.apply(match.fn, [params])
+    if (match) {
+      return match.fn.apply(match.fn, [match.params])
     }
-  }   
+  }
   return router
+}
+
+function InvalidRouteException(message, route) {
+  this.message = message
+  this.name = 'InvalidRouteException'
+  this.route = route
+
+  this.toString = function () {
+    return 'Invalid route: ' + message
+  }
+}
+
+function InvalidPathException(message, path) {
+  this.message = message
+  this.name = 'InvalidPathException'
+  this.path = path
+
+  this.toString = function () {
+    return 'Invalid path: ' + message
+  }
 }
 
 function falsy(d){
@@ -138,116 +179,131 @@ function parseQueryString(s) {
   }, {})
 }
 
+function asEmptySegment(pathSegment) {
+  return pathSegment === '' ? { type: 'empty' } : null
+}
 
-function parse(ptn){
-  var variable  = /^{(\w+)}$/
-    , partial   = /([\w'-]+)?{([\w-]+)}([\w'-]+)?/
-    , bracks    = /^[)]+/
+function asFixedSegment(pathSegment) {
+  return { type: 'fixed', identifier: pathSegment }
+}
 
-  return ~ptn.indexOf('(')? parseOptional(ptn) : parsePtn(ptn)
+function asPartialSegment(pathSegment) {
+  var partialRegex = /([\w'-]+)?{([\w-]+)}([\w'-]+)?/
+    , match = pathSegment.match(partialRegex)
+    , vars = []
+    , ptn = ''
+    , len = pathSegment.length
+    , index = 0
+    , identifier = pathSegment.replace(/{([\w-]+)}/g, extractAndTransformVariableName)
 
-  function parseVar(part){
-    var match = part.match(variable)
-    return {
-      type: "var"
-    , input: match[1]
+  if (!match) {
+    return null
+  }
+
+  while(index < len && match) {
+    index += match[0].length
+
+    if (match[1]) {
+      ptn += match[1]
+    }
+
+    ptn += '([\\w-]+)'
+
+    if (match[3]) {
+      ptn += match[3]
+    }
+
+    match = pathSegment.substr(index).match(partialRegex)
+  }
+
+  var matchRegex = new RegExp(ptn)
+
+  return {
+    type: 'partial'
+  , identifier: identifier
+  , matchFunction: matchFunction
+  , vars: vars
+  }
+
+  function extractAndTransformVariableName(matchedPattern, variableName) {
+    vars.push(variableName)
+    return '{var}'
+  }
+
+  function matchFunction(segment) {
+    var segmentMatches = segment.match(matchRegex)
+
+    return segmentMatches ? vars.reduce(function (params, variable, index) {
+      params[variable] = segmentMatches[index + 1]
+      return params
+    }, {}) : null
+  }
+}
+
+function asVarSegment(pathSegment) {
+  var match = pathSegment.match(/^{(\w+)}$/)
+
+  return match ? { type: 'var', identifier: match[1] } : null
+}
+
+function parsePtn(ptn) {
+  return ptn.split('/')
+    .reduce(function(parsedRecord, pathSegment, index, allSegments) {
+      if (pathSegment === '' && index === 0) {
+        parsedRecord.leadingSlash = allSegments.length > 1
+      } else if (pathSegment === '' && index === allSegments.length - 1) {
+        parsedRecord.trailingSlash = true
+      } else {
+        var newSegment = asEmptySegment(pathSegment)
+              || asVarSegment(pathSegment)
+              || asPartialSegment(pathSegment)
+              || asFixedSegment(pathSegment)
+        parsedRecord.segments.push(newSegment)
+      }
+      return parsedRecord
+    }, { leadingSlash: false, segments: [], trailingSlash: false })
+}
+
+function parseOptional(ptn) {
+  var out =  ''
+
+  var i = 0
+    , len = ptn.length
+    , isOptionalSegment = false
+
+  while (!isOptionalSegment && i < len) {
+    var curr = ptn.charAt(i)
+    switch (curr) {
+      case ')':
+      case '(':
+        isOptionalSegment = true
+        break
+      default:
+        out += curr
+        break
+    }
+    i++
+  }
+
+  var parsedOutput = parsePtn(out)
+  if (isOptionalSegment) {
+    var optionalSegment = parseOptional(ptn.substr(i))
+    if (optionalSegment.segments.length > 0) {
+      parsedOutput.segments.push(optionalSegment)
     }
   }
 
-  function parseFixed(part){
-    return {
-      type: "fixed"
-    , input: part
-    }
-  }
+  return parsedOutput
+}
 
-  function parsePartial(part){
-    var match = part.match(partial)
-      , ptn = ""
-      , len = part.length
-      , i = 0
+function parse(route) {
+  var split = route.split('?')
+    , parsedPath = split[0].indexOf('(/') > -1
+        ? parseOptional(split[0])
+        : parsePtn(split[0])
 
-    while(i < len && match){
-      i += match[0].length
-
-      if(match[1]){
-        ptn += match[1]
-      }
-
-      ptn += "([\\w-]+)"
-
-      if(match[3]){
-        ptn += match[3]
-      }
-
-      match = part.substr(i).match(partial)
-    }
-
-    var vars = []
-      , name = part.replace(
-      /{([\w-]+)}/g
-    , function(p, d){
-        vars.push(d)
-        return "{var}"
-      }
-    )
-    
-    return {
-      type: "partial"
-    , input: new RegExp(ptn)
-    , name: name
-    , vars: vars
-    }
-  }
-
-  function parsePtn(ptn){
-    return ['/'].concat(ptn.split("/"))
-      .filter(falsy)
-      .map(function(d){
-        if(variable.test(d)){
-          return parseVar(d)
-        }
-        if(partial.test(d)){
-          return parsePartial(d)
-        }
-        return parseFixed(d)
-      })
-  }
-
-  function parseOptional(ptn) {
-    var out =  ""
-      , list = []
-
-    var i = 0
-      , len = ptn.length
-      , onePart = true
-
-    while (onePart && i < len) {
-      var curr = ptn.charAt(i)
-      switch(curr){
-        case ")":
-        case "(":
-          onePart = false
-          break;
-
-        default:
-          out += curr
-          break;
-      }
-      i++
-    }
-
-    if(!onePart){
-      var next = parseOptional(ptn.substr(i + 1)).slice(1)
-      if(next.length){
-        list.push(
-          next
-        )  
-      }
-    }
-
-    return parsePtn(out).concat(list)
-  }
+  parsedPath.queryParams = parseQueryString(split[1])
+  return parsedPath
 }
 
 var rhumb = create()

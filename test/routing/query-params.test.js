@@ -1,5 +1,6 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
+  , queryStringInRouteError = /Invalid route: Must not contain a query string/
 
 test("Routing should pass query string params to callback", function(t) {
   var router = rhumb.create()
@@ -69,4 +70,29 @@ test("Routing should not overwrite path params with query params", function(t) {
   })
 
   router.match("/sing/bird-song?sound=bark")
+})
+
+test('Routing should throw an error when adding a route with a query string', function (t) {
+  t.plan(5)
+  var router = rhumb.create()
+
+  t.throws(function () {
+    router.add('/sing?foo=bar&baz=bam')
+  }, queryStringInRouteError)
+
+  t.throws(function () {
+    router.add('/sing/bird-song?foo=bar&baz=bam')
+  }, queryStringInRouteError)
+
+  t.throws(function () {
+    router.add('/sing/bird-song?foo=&bar&baz=bop')
+  }, queryStringInRouteError)
+
+  t.throws(function () {
+    router.add('/sing?foo=&')
+  }, queryStringInRouteError)
+
+  t.throws(function () {
+    router.add('/sing/bird-song?sound=bark')
+  }, queryStringInRouteError)
 })

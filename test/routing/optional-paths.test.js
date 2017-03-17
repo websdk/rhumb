@@ -1,5 +1,6 @@
 var test  = require('tape')
   , rhumb = require('../../src/rhumb')
+  , optionalPathError = /Invalid path: Must not contain an optional path/
 
 test("Routing should match /foo(/bar) with /foo and /foo/bar", function(t) {
   t.plan(2)
@@ -27,4 +28,23 @@ test("Routing should match /foo(/{bar}(/{bay})) with /foo, /foo/knew & /foo/knew
   router.match("/foo")
   router.match("/foo/knew")
   router.match("/foo/knew/you")
+})
+
+test('Routing should throw an error for matching paths with optional parts', function (t) {
+  t.plan(3)
+  var router = rhumb.create()
+
+  router.add('/foo(/bar(/bing))', function () {})
+
+  t.throws(function () {
+    router.match('/foo(/bar)')
+  }, optionalPathError)
+
+  t.throws(function () {
+    router.match('/foo(/bar/bing)')
+  }, optionalPathError)
+
+  t.throws(function () {
+    router.match('/foo/bar(/bing)')
+  }, optionalPathError)
 })

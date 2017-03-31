@@ -290,6 +290,7 @@ function parseOptional(ptn) {
     var optionalSegment = parseOptional(ptn.substr(i))
     if (optionalSegment.segments.length > 0) {
       parsedOutput.segments.push(optionalSegment)
+      parsedOutput.trailingSlash = optionalSegment.trailingSlash
     }
   }
 

@@ -149,3 +149,73 @@ test('Parsing should handle a path with empty optional part', function (t) {
     utils.fixedSegment('wibble()')
   ], 'ignores empty optional path when being parsed')
 })
+
+test('Parsing should identify whether a path has a trailing slash based upon the optional elements at end of path', function (t) {
+  t.plan(24)
+  var hasTrailingSlash = function (path) {
+        var result = rhumb._parse(path)
+          , lastOptionalPath = result.segments.slice(-1)[0]
+
+        t.ok(lastOptionalPath.trailingSlash, 'last optional path has a trailing slash')
+        t.ok(result.trailingSlash, 'top level path inherits the trailing slash')
+      }
+    , hasNoTrailingSlash = function (path) {
+        var result = rhumb._parse(path)
+          , lastOptionalPath = result.segments.slice(-1)[0]
+
+        t.notOk(lastOptionalPath.trailingSlash, 'last optional path has no trailing slash')
+        t.notOk(result.trailingSlash, 'top level path inherits no trailing slash')
+      }
+
+  hasNoTrailingSlash('/foo(/bar)')
+  hasNoTrailingSlash('/foo(/bar/bing)')
+  hasNoTrailingSlash('foo(/bar)')
+  hasNoTrailingSlash('foo(/bar/bing)')
+
+  hasTrailingSlash('/foo(/bar/)')
+  hasTrailingSlash('/foo(/bar/bing/)')
+  hasTrailingSlash('foo(/bar/)')
+  hasTrailingSlash('foo(/bar/bing/)')
+
+  hasTrailingSlash('/foo(//)')
+  hasNoTrailingSlash('/foo(//bar/bing)')
+  hasNoTrailingSlash('foo(/bar//bing)')
+  hasTrailingSlash('foo(/bar//)')
+})
+
+test('Parsing should identify whether a path has a trailing slash based upon the nested optional elements at end of path', function (t) {
+  t.plan(36)
+  var hasTrailingSlash = function (path) {
+        var result = rhumb._parse(path)
+          , lastOptionalPath = result.segments.slice(-1)[0]
+          , lastNestedOptionalPath = lastOptionalPath.segments.slice(-1)[0]
+
+        t.ok(lastNestedOptionalPath.trailingSlash, 'last nested optional path has a trailing slash')
+        t.ok(lastOptionalPath.trailingSlash, 'last optional path inherits the trailing slash')
+        t.ok(result.trailingSlash, 'top level path inherits the trailing slash')
+      }
+    , hasNoTrailingSlash = function (path) {
+        var result = rhumb._parse(path)
+          , lastOptionalPath = result.segments.slice(-1)[0]
+          , lastNestedOptionalPath = lastOptionalPath.segments.slice(-1)[0]
+
+        t.notOk(lastNestedOptionalPath.trailingSlash, 'last nested optional path has no trailing slash')
+        t.notOk(lastOptionalPath.trailingSlash, 'last optional path has no trailing slash')
+        t.notOk(result.trailingSlash, 'top level path has no trailing slash')
+      }
+
+  hasNoTrailingSlash('/foo(/bar(/bing))')
+  hasNoTrailingSlash('/foo(/bar(/bing/zap))')
+  hasNoTrailingSlash('foo(/bar(/bing))')
+  hasNoTrailingSlash('foo(/bar(/bing/zap))')
+
+  hasTrailingSlash('/foo(/bar(/bing/))')
+  hasTrailingSlash('/foo(/bar(/bing/zap/))')
+  hasTrailingSlash('foo(/bar(/bing/))')
+  hasTrailingSlash('foo(/bar(/bing/zap/))')
+
+  hasTrailingSlash('/foo(/bar(//))')
+  hasNoTrailingSlash('/foo(/bar(//bing))')
+  hasNoTrailingSlash('foo(/bar(/bing//zap))')
+  hasTrailingSlash('foo(/bar(/bing//))')
+})

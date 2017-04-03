@@ -136,7 +136,7 @@ Rhumb allows you to take a route and a set of params and produce a path that can
 
 #### fixed paths
 
-When you give `.interpolate(...)` a route without any declared variables or partial variable parts, then you will not see much changes:
+When you give `.interpolate(...)` a route without any declared variables or partial variable parts, then a valid path will be returned and you will typically not see any changes:
 
 ```javascript
 rhumb.interpolate("/stories", {})
@@ -146,10 +146,21 @@ rhumb.interpolate("/stories?sortBy=publishedDate", {})
 // returns "/stories?sortBy=publishedDate"
 ```
 
+When the route you supplied is not a valid path, Rhumb will step in and escape some of the characters, so that a valid path can be produced.
+
+If your route has empty parts, then some of the slash characters will be encoded to `%2F`:
+
+```javascript
+rhumb.interpolate('//sarah/scary', {})
+// returns "/%2Fsarah/scary"
+
+rhumb.interpolate('stories//scary', {})
+// returns "stories%2F/scary"
+```
 
 #### variable parts
 
-When variables are present, Rhumb is will interpolate the variables with the params you supply:
+When variables are present, Rhumb will interpolate the variables with the params you supply:
 
 ```javascript
 rhumb.interpolate("/potatoes/{variety}", { variety: "marabel" })
@@ -159,7 +170,7 @@ rhumb.interpolate("/shoes/{color}/{size}", { color: "red", size: "6" })
 // returns "/shoes/red/6"
 ```
 
-For interpolation to produce a valid path, it will throw and error when a required variable is absent, `""`, `null` or `undefined`:
+For interpolation to produce a valid path, it will throw an error when a required variable is absent, `""`, `null` or `undefined`:
 
 ```javascript
 rhumb.interpolate("/potatoes/{variety}", {})
@@ -183,7 +194,7 @@ rhumb.interpolate("/author/{forename}-{surname}", { forename: "susan", surname: 
 // returns "/author/susan-smith"
 ```
 
-It will also throw and error when a required partial variable is absent, `""`, `null` or `undefined`:
+It will also throw an error when a required partial variable is absent, `""`, `null` or `undefined`:
 
 ```javascript
 rhumb.interpolate("/orders/{days}-days-ago", { days: "" })
@@ -197,7 +208,7 @@ To mark a partially variable part as not-required, it has to be wrapped in an op
 
 #### optional parts
 
-Rhumb has is greedy with how it handles optional paths when interpolating, so expect optional parts to be included whenever possible.
+Rhumb is greedy with how it handles optional paths when interpolating, so expect optional parts to be included whenever possible.
 
 ```javascript
 rhumb.interpolate("/stories(/bob)", {})
@@ -207,7 +218,7 @@ rhumb.interpolate("/stories(/sarah(/scary))", {})
 // returns "/stories/sarah/scary"
 ```
 
-When variables or partially variables in optional parts are absent, `""`, `null` or `undefined` then no error is thown and the optional part is dropped.
+When variables or partially variables in optional parts are absent, `""`, `null` or `undefined` then no error is thrown and the optional part is dropped.
 
 ```javascript
 rhumb.interpolate("/stories(/by-{name})", {})

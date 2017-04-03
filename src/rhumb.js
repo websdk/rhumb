@@ -327,7 +327,7 @@ function tryReadingParamValue(params, key) {
 }
 
 function joinPaths(path, item) {
-  var pathStartingWithSlashes = /^\/(%2F)+$/
+  var pathStartingWithSlashes = /^\/?(%2F)+$/
   if (path === '' || path.match(pathStartingWithSlashes) || path[path.length - 1] === '/') {
     return path + item
   }

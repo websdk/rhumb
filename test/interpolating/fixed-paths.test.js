@@ -88,6 +88,33 @@ test('Interpolating should handle slashes before the optional paths', function (
     , 'prevent double slashes from occuring')
 })
 
+test('Interpolating should handle multi-segment fixed optional paths', function (t) {
+  t.plan(10)
+
+  t.equal(rhumb.interpolate('/wibble(//foo/bar)', {}), '/wibble/%2Ffoo/bar'
+    , 'keeps leading slash when provided')
+  t.equal(rhumb.interpolate('wibble(//foo/bar)', {}), 'wibble/%2Ffoo/bar'
+    , 'keeps path unmodified when no leading slash')
+  t.equal(rhumb.interpolate('/wibble(//foo/bar/)', {}), '/wibble/%2Ffoo/bar/'
+    , 'keeps leading and trailing slash when provided')
+  t.equal(rhumb.interpolate('wibble(//foo/bar/)', {}), 'wibble/%2Ffoo/bar/'
+    , 'keeps trailing slash when provided')
+
+  t.equal(rhumb.interpolate('/wibble(/foo//bar)', {}), '/wibble/foo%2F/bar'
+    , 'keeps leading slash when provided')
+  t.equal(rhumb.interpolate('wibble(/foo//bar)', {}), 'wibble/foo%2F/bar'
+    , 'keeps path unmodified when no leading slash')
+  t.equal(rhumb.interpolate('/wibble(/foo//bar/)', {}), '/wibble/foo%2F/bar/'
+    , 'keeps leading and trailing slash when provided')
+  t.equal(rhumb.interpolate('wibble(/foo//bar/)', {}), 'wibble/foo%2F/bar/'
+    , 'keeps trailing slash when provided')
+
+  t.equal(rhumb.interpolate('/wibble(/foo/bar//)', {}), '/wibble/foo/bar%2F/'
+    , 'keeps leading and trailing slash when provided')
+  t.equal(rhumb.interpolate('wibble(/foo/bar//)', {}), 'wibble/foo/bar%2F/'
+    , 'keeps trailing slash when provided')
+})
+
 test('Interpolating should handle empty segments in fixed paths', function (t) {
   t.plan(8)
 

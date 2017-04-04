@@ -304,11 +304,114 @@ function parse(route) {
         : parsePtn(split[0])
 
   parsedPath.queryParams = parseQueryString(split[1])
+  parsedPath.queryParamsString = split[1] ? '?' + split[1] : null
   return parsedPath
+}
+
+function tryReadingParamValue(params, key) {
+  if (!(key in params)) {
+    throw new Error('Invalid parameter: "' + key + '" is not supplied')
+  }
+
+  var value = params[key]
+  switch (value) {
+    case '':
+      throw new Error('Invalid parameter: "' + key + '" is an empty value')
+    case undefined:
+      throw new Error('Invalid parameter: "' + key + '" is undefined')
+    case null:
+      throw new Error('Invalid parameter: "' + key + '" is null')
+    default:
+      return value
+  }
+}
+
+function joinPaths(path, item) {
+  var pathStartingWithSlashes = /^\/?(%2F)+$/
+  if (path === '' || path.match(pathStartingWithSlashes) || path[path.length - 1] === '/') {
+    return path + item
+  }
+  return path + '/' + item
+}
+
+function interpolateEmpty(path) {
+  return path + '%2F'
+}
+
+function interpolateVar(path, segment, params) {
+  var value = tryReadingParamValue(params, segment.identifier)
+  return joinPaths(path, value)
+}
+
+function interpolateFixed(path, segment) {
+  return joinPaths(path, segment.identifier)
+}
+
+function interpolatePartial(path, segment, params) {
+  var i = 0
+    , match = segment.identifier.replace(/\{var\}/g, function () {
+        var varName = segment.vars[i++]
+          , value = tryReadingParamValue(params, varName)
+        return value
+      })
+
+  return joinPaths(path, match)
+}
+
+function interpolateOptional(path, optionalSegment, params) {
+  try {
+    return joinPaths(path, optionalSegment.segments.reduce(
+      function (optionalPath, segment) {
+        switch (segment.type) {
+          case 'empty':
+            return interpolateEmpty(optionalPath)
+          case 'var':
+            return interpolateVar(optionalPath, segment, params)
+          case 'partial':
+            return interpolatePartial(optionalPath, segment, params)
+          case 'fixed':
+            return interpolateFixed(optionalPath, segment)
+          default:
+            return optionalPath ? interpolateOptional(optionalPath, segment, params) : ''
+        }
+      }, ''))
+  } catch (ex) {
+    return path
+  }
+}
+
+function interpolate(route, params) {
+  var parsedRoute = parse(route)
+    , queryParamsString = parsedRoute.queryParamsString
+    , interpolatedPath = parsedRoute.segments.reduce(function (path, segment) {
+        switch (segment.type) {
+          case 'empty':
+            return interpolateEmpty(path)
+          case 'var':
+            return interpolateVar(path, segment, params)
+          case 'partial':
+            return interpolatePartial(path, segment, params)
+          case 'fixed':
+            return interpolateFixed(path, segment)
+          default:
+            return interpolateOptional(path, segment, params)
+        }
+    }, parsedRoute.leadingSlash ? '/' : '')
+
+    if (parsedRoute.trailingSlash) {
+      interpolatedPath = joinPaths(interpolatedPath, '')
+    }
+
+    if (parsedRoute.queryParamsString) {
+      interpolatedPath += queryParamsString
+    }
+
+  return interpolatedPath
 }
 
 var rhumb = create()
 rhumb.create = create
+rhumb.interpolate = interpolate
 rhumb._parse = parse
 rhumb._findInTree = findIn
 

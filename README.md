@@ -16,6 +16,7 @@ Bells and Whistles
 * partially variable parts
 * optional parts
 * parameter parsing
+* interpolate params to produce paths
 
 
 Basic Usage
@@ -41,6 +42,12 @@ Whatever you return in the callback will to handed back to the caller of `match`
 
 ```javascript
 redShoes = rhumb.match("/happy/shoes/red")
+```
+
+When you need to create a URI from a set of params, the `interpolate` function can be used
+
+```javascript
+redShoesUri = rhumb.interpolate("/happy/shoes/{color}", { color: "red" })
 ```
 
 Route Syntax
@@ -121,6 +128,105 @@ Will match
 * `/stories/sarah/scary`
 
 Have fun!
+
+Parameter Interpolation
+-----------------------
+
+Rhumb allows you to take a route and a set of params and produce a path that can be matched against a route.
+
+#### fixed paths
+
+When you give `.interpolate(...)` a route without any declared variables or partial variable parts, then a valid path will be returned and you will typically not see any changes:
+
+```javascript
+rhumb.interpolate("/stories", {})
+// returns "/stories"
+
+rhumb.interpolate("/stories?sortBy=publishedDate", {})
+// returns "/stories?sortBy=publishedDate"
+```
+
+When the route you supplied is not a valid path, Rhumb will step in and escape some of the characters, so that a valid path can be produced.
+
+If your route has empty parts, then some of the slash characters will be encoded to `%2F`:
+
+```javascript
+rhumb.interpolate('//sarah/scary', {})
+// returns "/%2Fsarah/scary"
+
+rhumb.interpolate('stories//scary', {})
+// returns "stories%2F/scary"
+```
+
+#### variable parts
+
+When variables are present, Rhumb will interpolate the variables with the params you supply:
+
+```javascript
+rhumb.interpolate("/potatoes/{variety}", { variety: "marabel" })
+// returns "/potatoes/marabel"
+
+rhumb.interpolate("/shoes/{color}/{size}", { color: "red", size: "6" })
+// returns "/shoes/red/6"
+```
+
+For interpolation to produce a valid path, it will throw an error when a required variable is absent, `""`, `null` or `undefined`:
+
+```javascript
+rhumb.interpolate("/potatoes/{variety}", {})
+// throws 'Invalid parameter: "variety" is missing'
+
+rhumb.interpolate("/shoes/{color}/{size}", { color: "red", size: null })
+// throws 'Invalid parameter: "size" is null'
+```
+
+To mark a variable part as not-required, it has to be wrapped in an optional path, as shown later.
+
+#### partially variable parts
+
+Like variables, Rhumb will interpolate partially variable parts when they are defined and not empty in the supplied params:
+
+```javascript
+rhumb.interpolate("/orders/{days}-days-ago", { days: "40" })
+// returns "/orders/40-days-ago"
+
+rhumb.interpolate("/author/{forename}-{surname}", { forename: "susan", surname: "smith" })
+// returns "/author/susan-smith"
+```
+
+It will also throw an error when a required partial variable is absent, `""`, `null` or `undefined`:
+
+```javascript
+rhumb.interpolate("/orders/{days}-days-ago", { days: "" })
+// throws 'Invalid parameter: "days" is empty'
+
+rhumb.interpolate("/author/{forename}-{surname}", { forename: "susan", surname: undefined })
+// throws 'Invalid parameter: "surname" is undefined'
+```
+
+To mark a partially variable part as not-required, it has to be wrapped in an optional path, as shown later.
+
+#### optional parts
+
+Rhumb is greedy with how it handles optional paths when interpolating, so expect optional parts to be included whenever possible.
+
+```javascript
+rhumb.interpolate("/stories(/bob)", {})
+// returns "/stories/bob"
+
+rhumb.interpolate("/stories(/sarah(/scary))", {})
+// returns "/stories/sarah/scary"
+```
+
+When variables or partially variables in optional parts are absent, `""`, `null` or `undefined` then no error is thrown and the optional part is dropped.
+
+```javascript
+rhumb.interpolate("/stories(/by-{name})", {})
+// returns "/stories"
+
+rhumb.interpolate("/stories(/{author}(/{genre}))", { author: "sarah", genre: "" })
+// returns "/stories/sarah"
+```
 
 Found an issue, or want to contribute?
 --------------------------------------
